@@ -46,6 +46,7 @@ async def w2x(url: str, connector: ProxyConnector = None) -> 'list':
     header = {'api-key': 'b26e98d9-9ce8-4a60-9479-20993ebe9f85'}
     parm = {'image': url}
     url = 'https://api.deepai.org/api/waifu2x'
+    logger.debug(f'w2x -> {url}')
     re: dict = json.loads(await request('POST', url, headers=header, data=parm))
     if 'err' in re.keys():
         logger.debug(re['err'])

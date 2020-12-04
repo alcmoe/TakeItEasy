@@ -773,7 +773,7 @@ URaNaiDesc = [
             },
             {
                 "good-luck": 25,
-                "content": "好难啊！秀才教交我！"
+                "content": "好难啊！秀才教教我！"
             }
         ]
     },
