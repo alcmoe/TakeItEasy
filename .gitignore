@@ -1,1 +1,9 @@
 /venv/
+/.idea/
+/*.gif
+/bot_take_it_easy.*
+/application/YummyPicture/yummy/*/data/save/*
+/application/YummyPicture/config/*
+/application/Economy/config/*
+/application/TalkToMe/config/*
+/application/URaNai/config/*
