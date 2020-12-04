@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import colorlog
 import logging
 from logging import handlers
@@ -14,7 +17,9 @@ fmt = "%(log_color)s[%(log_color)s%(asctime)s][%(levelname)s]: %(log_color)s%(me
 # logging.root.setLevel(level)
 formatter = colorlog.ColoredFormatter(fmt, log_colors=log_colors_config)
 stream = logging.StreamHandler()
-th = handlers.TimedRotatingFileHandler(filename='bot_take_it_easy.log', when='D', backupCount=3, encoding='utf-8')
+log_dir: str = os.path.join(os.path.dirname(__file__), f'log')
+Path(log_dir).mkdir(exist_ok=True)
+th = handlers.TimedRotatingFileHandler(filename='log/bot_take_it_easy.log', when='D', backupCount=3, encoding='utf-8')
 # stream.setLevel(level)
 stream.setFormatter(formatter)
 logger = logging.getLogger()

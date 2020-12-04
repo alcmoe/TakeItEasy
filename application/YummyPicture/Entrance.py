@@ -206,7 +206,7 @@ async def PicDeaHandler(app: Slave, message: GroupMessage):
                 pass
             else:
                 plain: Plain = quote.origin.get(Plain)[0]
-                if plain.text == '[图片]':  # quoto 获取不到图片;从http插件重新获取,等mirai
+                if plain.text == '[图片]':
                     if (message.sender.group.id << 32) + quote.id in GCache.keys():
                         cache = GCache[(message.sender.group.id << 32) + quote.id]
                         image: Image = cache[0]
@@ -220,8 +220,7 @@ async def PicDeaHandler(app: Slave, message: GroupMessage):
                             mec = MeCh.create([At(message.sender.id), Plain('不在本地与消息缓存中,无法保存')])
                             await app.sendGroupMessage(message.sender.group, mec)
                             return
-                    te = await saveUrlPicture(image.url, image.imageId,
-                                              f'application/YummyPicture/yummy/{ym}/data/save', ext)
+                    te = await saveUrlPicture(image.url, image.imageId, 'application/YummyPicture/save/pic', ext)
                     msg = [At(message.sender.id), Plain(te)]
                     await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
         elif any(text.__dict__['text'].strip() == '图源' for text in texts):
@@ -272,9 +271,9 @@ async def PicDeaHandler(app: Slave, message: GroupMessage):
                 connector: ProxyConnector = None
                 if proxy := ymConfig.getConfig('setting').get('proxy'):
                     connector = ProxyConnector.from_url(proxy)
-                if (message.sender.group.id << 32) + quote.id in GCache.keys():  # bot的图片python sdk不支持customMessage
+                if (message.sender.group.id << 32) + quote.id in GCache.keys():
                     cache = GCache[(message.sender.group.id << 32) + quote.id]
-                    url = cache[0]
+                    url = cache[0].url
                 else:
                     quote_source: GroupMessage = await app.messageFromId(quote.id)
                     image: Image = quote_source.messageChain.get(Image)[0]
@@ -340,7 +339,7 @@ async def send(app: Slave, yummy: [], group: Group, prefix: str):
 
 def ripeReg(message: GroupMessage) -> list:
     if match := reg.match(r'(?:.*?([\d一二两三四五六七八九十]*)张|来点)?(.{0,10}?)的?色图$', message.messageChain.asDisplay()):
-        if number := formatToNumber(match[1]) > 10:
+        if (number := formatToNumber(match[1])) > 10:
             number = 1
         keyword = match[2]
         return [f'./R{number}'] + keyword.split(' ')

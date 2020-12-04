@@ -12,7 +12,7 @@ class Database:
     databaseFile: str = ''
 
     def __init__(self):
-        data_dir: str = os.path.join(os.path.dirname(__file__), f'yummy/{self.model}/data')
+        data_dir: str = os.path.join(os.path.dirname(__file__), f'save/data')
         Path(data_dir).mkdir(exist_ok=True)
         self.databaseFile = Path(data_dir).joinpath(self.model+'.json')
         self.load()
