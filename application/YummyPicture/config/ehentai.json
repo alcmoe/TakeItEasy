@@ -1,0 +1,10 @@
+{
+ "user": "",
+ "password": "",
+ "token": "",
+ "per_page": 25,
+ "rating": {
+  "h": 6,
+  "non-h": 2
+ }
+}
