@@ -9,7 +9,7 @@ class ConfigNotFoundException(Exception):
         self.config = config
 
     def __str__(self):
-        logger.exception("Unknown action" + self.config)
+        logger.exception("Unknown config " + self.config)
 
 
 class ConfigKeyNotFoundException(Exception):
@@ -17,4 +17,4 @@ class ConfigKeyNotFoundException(Exception):
         self.key = key
 
     def __str__(self):
-        logger.exception("Unknown key" + self.key)
+        logger.exception("Unknown key " + self.key)

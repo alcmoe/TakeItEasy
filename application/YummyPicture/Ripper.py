@@ -18,7 +18,6 @@ class Ripper:
     rawUrl: str
     rip: str
     ripe: str
-    rips: dict = {}
     periods: dict
     perPage: int
 
@@ -36,6 +35,9 @@ class Ripper:
 
     def detail(self) -> 'Ripper':
         return self.action(RipperConst.DETAIL)
+
+    def __init__(self):
+        self.rips = {}
 
     def action(self, action) -> 'Ripper':
         if action.name in list(RipperConst.__members__.keys()) and not self.hasAction:
