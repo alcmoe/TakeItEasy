@@ -13,8 +13,8 @@ class Database:
 
     def __init__(self):
         data_dir: str = os.path.join(os.path.dirname(__file__), f'save/data')
-        Path(data_dir).mkdir(exist_ok=True)
-        self.databaseFile = Path(data_dir).joinpath(self.model+'.json')
+        Path(data_dir).mkdir(exist_ok=True, parents=True)
+        self.databaseFile = Path(data_dir).joinpath(self.model + '.json')
         self.load()
 
     async def save(self):

@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import random
+from tqdm import tqdm
 from io import BytesIO
 from pathlib import Path
 

@@ -1,5 +1,4 @@
 import json
-import os.path
 from pathlib import Path
 
 from ConfigExcetions import *
@@ -15,14 +14,33 @@ class Config:
 
     def __init__(self, app: str, options: dict, loads: dict):
         self.app = app
-        self.path = os.path.join(os.path.dirname(__file__), f'application/{app}/config')
+        self.path = Path.cwd().joinpath(f'application/{app}/config')
+        Path(self.path).mkdir(exist_ok=True, parents=True)
         self.options = options
         self.loads = loads
         self.Configs = {}
+        self.empty_config = []
         for k, v in loads.items():
-            self.load(k)
+            if not self.load(k):
+                return
             if v:
                 self.load(self.Configs[k][v])
+
+    def checkFiles(self) -> list:
+        for k, v in self.options.items():
+            if not Path(self.path).joinpath(v).is_file():
+                self.empty_config.append(k)
+        return self.empty_config
+
+    def initConfigs(self, contents: dict):
+        for k, v in contents.items():
+            config = Path(self.path).joinpath(self.options[k])
+            f = open(config, 'w')
+            f.write(json.dumps(v, indent=1))
+            f.close()
+            logger.info(f"init [{self.app} {k}]  dict successfully.")
+            self.empty_config.remove(k)
+        self.reload()
 
     async def save(self, option: str = ''):
         if not option or option in self.options.keys():
@@ -53,10 +71,8 @@ class Config:
             for (key, load) in loads.items():
                 config = Path(self.path).joinpath(load)
                 try:
-                    if not os.path.exists(config):
-                        f = open(config, 'w', encoding='UTF-8')
-                        f.write(json.dumps({}, indent=1))
-                        f.close()
+                    if not Path(config).is_file():
+                        return False
                     f = open(config, 'r', encoding='UTF-8')
                     self.Configs[key] = json.loads(f.read())
                     f.close()
