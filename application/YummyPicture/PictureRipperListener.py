@@ -76,7 +76,6 @@ class PictureRipperListener(Listener):
         return message.sender.id in ymConfig.getConfig('setting').get('admins')
 
     def getRating(self, source, group, force=False):
-        print(source)
         if group not in self.ratings.keys() or force:
             level = ymConfig.getConfig('setting').get('group_rate')[str(group)] if str(group) in ymConfig.getConfig(
                 'setting').get('group_rate').keys() else ymConfig.getConfig('setting').get('rating')
@@ -99,7 +98,7 @@ class PictureRipperListener(Listener):
                 if not await self.Economy.Economy.pay(message.sender.id, self.Economy.capitalist, count * 5):
                     await self.notEnough(app, message, 5)
                     return
-            ripper: YummyPictureListener.ripperClass = self.ripperClass()
+            ripper: PictureRipperListener.ripperClass = self.ripperClass()
             gid = message.sender.group.id
             self.getRating(self.ym, gid)
             if args['key'] == 'n':

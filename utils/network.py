@@ -5,7 +5,7 @@ async def saveUrlPicture(url: str, name: str, folder: str = '', ext: str = '', c
     try:
         ext = url.split('.')[-1] if not ext else ext
         save_path = os.path.join(os.path.dirname(__file__), '..', folder)
-        Path(save_path).mkdir(exist_ok=True)
+        Path(save_path).mkdir(exist_ok=True, parents=True)
         if os.path.exists(Path(save_path).joinpath(f'{name}.{ext}')):
             return '已经存下了-b'
         data = await request('GET', url, connector=connector)
@@ -21,6 +21,38 @@ async def saveUrlPicture(url: str, name: str, folder: str = '', ext: str = '', c
         return 'IO炸了'
     except (asyncio.TimeoutError, ValueError) as e:
         raise e
+
+
+async def fetch(session, url, name, bar=None, headers=None):
+    if headers:
+        async with session.get(url, headers=headers) as req:
+            with(open(name, 'ab')) as f:
+                while True:
+                    chunk = await req.content.read(1024)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    bar.update(1024)
+            bar.close()
+    else:
+        async with session.get(url) as req:
+            return req
+
+
+async def saveUrlVideo(url: str, name: str, connector: ProxyConnector):
+    async with aiohttp.ClientSession(connector=connector) as session:
+        req = await fetch(session, url, name)
+        file_size = int(req.headers['content-length'])
+        logger.info(f"{name} の length : {file_size}")
+        if Path(name).is_file():
+            first_byte = os.path.getsize(name)
+        else:
+            first_byte = 0
+        if first_byte >= file_size:
+            return file_size
+        header = {"Range": f"bytes={first_byte}-{file_size}"}
+        bar = tqdm(total=file_size, initial=first_byte, unit='B', unit_scale=True, desc=name)
+        await fetch(session, url, name, bar=bar, headers=header)
 
 
 async def requestText(url: str, method: str = 'GET', headers: dict = None, params: dict = None, body=None,

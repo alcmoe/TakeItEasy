@@ -1,19 +1,16 @@
-import threading
-
 from graia.application import MessageChain
 from graia.application.message.elements.internal import At, Quote
 from graia.broadcast import Broadcast, ExecutionStop
 
 
-class Listener(threading.Thread):
+class Listener:
     bcc: Broadcast
     APP_COMMANDS: list
 
     def __init__(self, bcc: Broadcast):
-        super().__init__()
         self.bcc = bcc
 
-    def active(self):
+    def run(self):
         pass
 
     def cmdFilter(self, message: MessageChain):

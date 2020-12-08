@@ -1,18 +1,20 @@
 from Config import Config
 from Logger import APPLogger
 from .InitConfig import contents
-app: str = 'Economy'
+
+app: str = 'VideoRipper'
 logger = APPLogger(app)
+
 
 configs = {
     'setting': "setting.json",
-    'config': "config.json"
+    'iwara': "iwara.json"
 }
 
-ecConfig = Config(app, configs, {'setting': '', 'config': ''})
-if empty := ecConfig.checkFiles():
+vrConfig = Config(app, configs, {'setting': 'ripper'})
+if empty := vrConfig.checkFiles():
     insert = {}
     for option in empty:
         insert[option] = contents[option]
-    ecConfig.initConfigs(insert)
+    vrConfig.initConfigs(insert)
 del contents
