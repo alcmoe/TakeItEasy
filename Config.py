@@ -89,10 +89,7 @@ class Config:
             raise ConfigNotFoundException(option)
 
     def get(self, key: str):
-        try:
-            return self.Configs[self.nowConfig][key]
-        except KeyError:
-            return None
+        return self.Configs[self.nowConfig].get(key)
 
     def getAll(self):
         return self.Configs[self.nowConfig]
