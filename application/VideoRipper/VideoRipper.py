@@ -30,7 +30,9 @@ class VideoRipperListener(Listener):
         commands: [str] = message.messageChain.asDisplay().split(' ')
         cmd = commands[0].upper()
         if cmd == self.APP_COMMANDS[0]:
-            if not self.START_CHECK:
+            if self.START_CHECK:
+                logger.info('already enable checking')
+            else:
                 self.bcc.loop.create_task(self.subscriptionCheckTask(app))
                 self.START_CHECK = True
                 logger.info('enable checking new post')

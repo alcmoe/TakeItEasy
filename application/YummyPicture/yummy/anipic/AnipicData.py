@@ -13,13 +13,11 @@ class AnipicData(YummyData):
     small_preview: str
     medium_preview: str
     big_preview: str
-    rating: str
     md5: str
     erotics: str
 
     async def get(self, check_size: bool = False, size="file") -> bytes:
         try:
-
             headers = {}
             connector: ProxyConnector = ProxyConnector()
             proxy = ymConfig.getConfig('setting').get('proxy')

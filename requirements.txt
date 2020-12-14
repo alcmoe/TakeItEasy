@@ -3,12 +3,12 @@ aiohttp-socks==0.5.5
 async-timeout==3.0.1
 attrs==20.3.0
 beautifulsoup4==4.9.3
-chardet==3.0.4
+chardet==4.0.0
 colorama==0.4.4
 colorlog==4.6.2
 croniter==0.3.36
 graia-application-mirai==0.11.0
-graia-broadcast==0.5.3
+graia-broadcast==0.5.0
 humanfriendly==9.0
 idna==2.10
 iterwrapper==0.1.4
@@ -26,3 +26,5 @@ soupsieve==2.0.1
 tqdm==4.54.1
 typing-extensions==3.7.4.3
 yarl==1.6.3
+openpyxl~=3.0.5
+APScheduler~=3.6.3

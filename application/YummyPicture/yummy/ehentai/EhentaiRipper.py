@@ -10,60 +10,42 @@ from application.YummyPicture.yummy.ehentai import EhentaiData
 
 
 class EhentaiRipper(Ripper):
-    token = ''
-    actions = {'new': '',
-               'popular': 'popular',
-               'search': '',
-               'random': '',
-               'detail': 'g'}
-    cats = {'doujinshi': 2,
-            'manga': 4,
-            'artist_cg': 8,
-            'game_cg': 16,
-            'western': 512,
-            'non_h': 256,
-            'image_set': 32,
-            'cosplay': 64,
-            'asian_porn': 128,
-            'misc': 1
-            }
-    category = 1023 - cats['doujinshi'] - cats['manga'] - cats['image_set'] - cats['artist_cg']
+    per_pages: dict = dict(popular=50, detail=40, new=25, search=25, random=25)
+    cats: dict = dict(doujinshi=2, manga=4, artist_cg=8, game_cg=16, western=512, non_h=256, image_set=32, cosplay=64,
+                      asian_porn=128, misc=1)
+    category: int = 1023 - cats['doujinshi'] - cats['manga'] - cats['image_set'] - cats['artist_cg']
     gr: str = 'h'
     gdr: str = ''
-    rawUrl: str = 'https://e-hentai.org/'
-    rip: str = 'https://e-hentai.org/'
     api: str = 'https://api.e-hentai.org/api.php/'
-    perPage: int = 25
-    perPages: dict = {RipperConst.POPULAR: 50,
-                      RipperConst.DETAIL: 40,
-                      RipperConst.NEW: 25,
-                      RipperConst.SEARCH: 25,
-                      RipperConst.RANDOM: 25
-                      }
-    npPage: int = perPage
+
+    def __init__(self):
+        super(EhentaiRipper, self).__init__()
+        self.actions = dict(new='', search='', random='', popular='post/popular', detail='g')
+        self.rip = 'https://e-hentai.org/'
+        self.per_page = 25
 
     def __build(self):
         # build action
-        self.parse(self.actions[self.hasAction.value] + '?')
+        self.parse(self.actions[self.has_action.value] + '?')
         # build option
-        self.perPage = self.perPages[self.hasAction]
+        self.per_page = self.per_pages[self.has_action]
         # ...
         # build search
-        if self.hasAction == RipperConst.SEARCH:
+        if self.has_action == RipperConst.SEARCH:
             self.parm('f_search', self.tags2str())
         # build random
-        if self.hasAction == RipperConst.RANDOM:
-            self.hasPage = random.randint(0, 5000)
-        if self.hasAction == RipperConst.DETAIL:
+        if self.has_action == RipperConst.RANDOM:
+            self.has_page = random.randint(0, 5000)
+        if self.has_action == RipperConst.DETAIL:
             self.__buildSpecific()
         else:
             self.parm("f_cats", str(self.category))
         # '''others'''
 
         # build rating
-        if self.hasAction == self.actions[RipperConst.NEW.value]:  # post
+        if self.has_action == self.actions[RipperConst.NEW.value]:  # post
             self.__buildRating()
-        if self.hasAction == RipperConst.DETAIL:
+        if self.has_action == RipperConst.DETAIL:
             self._buildVariant()
         else:
             super()._buildVariant()
@@ -75,7 +57,7 @@ class EhentaiRipper(Ripper):
         proxy = ymConfig.getConfig('setting').get('proxy')
         if proxy:
             connector = ProxyConnector.from_url(proxy)
-        if self.hasAction != RipperConst.DETAIL:
+        if self.has_action != RipperConst.DETAIL:
             find = ['table', 'itg gltc']
         else:
             find = ['div', 'gdtm']
@@ -85,7 +67,7 @@ class EhentaiRipper(Ripper):
             async with aiohttp.request('GET', k, cookies=cookies, connector=connector) as response:
                 soup = BeautifulSoup((await response.read()).decode("utf-8"), "lxml")
             sear = soup.find_all(find[0], class_=find[1])
-            if self.hasAction == RipperConst.DETAIL:
+            if self.has_action == RipperConst.DETAIL:
                 sear = sear[t[0]:t[1]]  # no ads
                 for one in sear:
                     link = one.contents[0].contents[0]['href']
@@ -95,7 +77,7 @@ class EhentaiRipper(Ripper):
                     ehentai.__dict__.update({'preview': url})
                     result.append(ehentai)
             else:
-                rm = self.perPages[self.hasAction]
+                rm = self.per_pages[self.has_action]
                 tables = sear[0].contents[1:rm + 1]
                 tables += sear[0].contents[rm + 2:]
                 tables = tables[t[0]:t[1]]
@@ -113,14 +95,11 @@ class EhentaiRipper(Ripper):
                     ehentai.preview = f"https://ehgt.org/m/{str(1000000000 + int(la[-3]))[1:7]}/{la[-3]}-00.jpg"
                     result.append(ehentai)
         await connector.close()
-        self.hasParm = 0
-        self.hasAction = ''
-        self.rips.clear()
         return result
 
     def __buildSpecific(self):
-        gallery = self.hasSpecific[0][0].split('/')
-        db = self.hasSpecific[1]
+        gallery = self.has_specific[0][0].split('/')
+        db = self.has_specific[1]
         gid = gallery[0]
         try:
             token = db.database[gid]['token']
@@ -131,41 +110,41 @@ class EhentaiRipper(Ripper):
             return self.parse(f'{gallery[0]}/{gallery[1]}/')
 
     def __buildRating(self) -> 'EhentaiRipper':
-        if ymConfig.getConfig('setting').get('enable_rating_check') != 'disable' and self.hasRating:
-            if self.hasAction == RipperConst.DETAIL:
-                if self.hasRating == 'h' and self.gdr and self.gdr == 'non-h':
+        if ymConfig.getConfig('setting').get('enable_rating_check') != 'disable' and self.has_rating:
+            if self.has_action == RipperConst.DETAIL:
+                if self.has_rating == 'h' and self.gdr and self.gdr == 'non-h':
                     self.rip = self.rip.replace('/g/', '/k/')
                     return self
-            if self.hasRating == 'non-h':
+            if self.has_rating == 'non-h':
                 self.gr = 'non-h'
                 self.category -= self.cats['non_h']
         return self
 
     def tags2str(self) -> str:
         taster = ''
-        for tag in self.hasTags:
+        for tag in self.has_tags:
             if tag:
                 taster += tag + '+'
         return taster[:-1]
 
     def offset(self, offset: str) -> 'EhentaiRipper':
-        self.perPage = self.perPages[self.hasAction]
-        self.hasPage = int(offset) // self.perPage
-        self.hasOffset = int(offset) % self.perPage
+        self.per_page = self.per_pages[self.has_action]
+        self.has_page = int(offset) // self.per_page
+        self.has_offset = int(offset) % self.per_page
         return self
 
     def _buildVariant(self, offset: int = 0):
-        page = self.hasPage + offset
+        page = self.has_page + offset
         self.ripe = self.rip
-        if self.hasOffset + self.hasCount > self.perPage:
+        if self.has_offset + self.has_count > self.per_page:
             self.parm('p', str(page))
-            self.rips[self.rip] = (self.hasOffset, self.perPage)
+            self.rips[self.rip] = (self.has_offset, self.per_page)
             self.parm('p', str(int(page) + 1), True)
-            self.rips[self.ripe] = (0, self.hasCount - (self.perPage - self.hasOffset))
+            self.rips[self.ripe] = (0, self.has_count - (self.per_page - self.has_offset))
         else:
             self.parm('p', str(page))
-            self.rips[self.rip] = (self.hasOffset, self.hasCount + self.hasOffset)
+            self.rips[self.rip] = (self.has_offset, self.has_count + self.has_offset)
 
     def period(self, period: str) -> 'EhentaiRipper':
-        self.perPage = self.perPages[self.hasAction]
+        self.per_page = self.per_pages[self.has_action]
         return self

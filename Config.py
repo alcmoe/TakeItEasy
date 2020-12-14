@@ -94,6 +94,9 @@ class Config:
         except KeyError:
             return None
 
+    def getAll(self):
+        return self.Configs[self.nowConfig]
+
     def set(self, key: str, value: any):
         self.Configs[self.nowConfig][key] = value
         return True

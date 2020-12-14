@@ -10,12 +10,10 @@ from application.YummyPicture.YummyData import YummyData
 
 class EhentaiData(YummyData):
     gid: str
-    url: str
     category: str
     token: str
     archiver_key: str
     preview: str
-    rating: str
     md5: str
 
     async def get(self, check_size: bool = False, size="big") -> bytes:

@@ -7,11 +7,12 @@ from application.YummyPicture import YummyData
 
 
 class Database:
-    model: str = ''
+
     database: dict = {}
     databaseFile: str = ''
 
-    def __init__(self):
+    def __init__(self, model: str):
+        self.model: str = model
         data_dir: str = os.path.join(os.path.dirname(__file__), f'save/data')
         Path(data_dir).mkdir(exist_ok=True, parents=True)
         self.databaseFile = Path(data_dir).joinpath(self.model + '.json')

@@ -3,6 +3,8 @@
 /*.gif
 /log/
 /bot_take_it_easy.*
-/application/*/config/
+/application/*/config
+/application/PrincessConnect/png/
+/application/PrincessConnect/sheets/
 /application/VideoRipper/save/
 /application/YummyPicture/save/

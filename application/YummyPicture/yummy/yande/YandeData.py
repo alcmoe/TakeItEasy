@@ -12,7 +12,6 @@ class YandeData(YummyData):
     preview_url: str
     sample_url: str
     jpeg_url: str
-    rating: str
 
     async def get(self, check_size: bool = False, size="sample") -> bytes:
         try:
