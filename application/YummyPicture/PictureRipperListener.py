@@ -2,6 +2,7 @@ import re as reg
 import importlib
 from typing import List
 
+from aiohttp import ClientResponseError
 from graia.application import GraiaMiraiApplication as Slave, GroupMessage, enter_message_send_context, UploadMethods
 from graia.application.message.chain import MessageChain as MeCh, MessageChain
 from graia.application.group import Group
@@ -12,6 +13,7 @@ from graia.broadcast.builtin.decoraters import Depend
 
 from Listener import Listener
 from application.YummyPicture import logger, ymConfig
+from application.YummyPicture.RandomRipper import RandomData
 from utils.trim import *
 from utils.network import *
 from application.YummyPicture.Searcher import Searcher
@@ -55,11 +57,15 @@ class PictureRipperListener(Listener):
         async def groupQuoteHandler(app: Slave, message: GroupMessage):
             await self.PicDeaHandler(app, message)
 
+        @self.bcc.receiver(GroupMessage, headless_decoraters=[Depend(self.seTuTextFilter)])
+        async def groupSeTuTextHandler(app: Slave, message: GroupMessage):
+            await self.seTuTextHandler(app, message)
+
     def cmdFilter(self, message: MessageChain):
         message: str = message.asDisplay()
-        match = self.ripeReg(message)
+        # match = self.ripeReg(message)
         dis: [str] = message.split(' ')[0].upper()
-        if dis[:3] not in self.APP_COMMANDS and not match:
+        if dis[:3] not in self.APP_COMMANDS:
             raise ExecutionStop()
 
     def quoteFilter(self, message: MessageChain):
@@ -69,6 +75,12 @@ class PictureRipperListener(Listener):
             if all(text.__dict__['text'].strip() not in self.QUOTE_COMMANDS for text in plains):
                 raise ExecutionStop()
         else:
+            raise ExecutionStop()
+
+    def seTuTextFilter(self, message: MessageChain):
+        message: str = message.asDisplay()
+        match = self.ripeReg(message)
+        if not match:
             raise ExecutionStop()
 
     @staticmethod
@@ -85,8 +97,6 @@ class PictureRipperListener(Listener):
             logger.info(f"rating {group} is {self.ratings[group]}")
 
     async def RipperHandler(self, app: Slave, message: GroupMessage, commands: list):
-        if match := self.ripeReg(message.messageChain.asDisplay()):
-            commands = match
         commands[0] = commands[0].upper()
         if './' in commands[0]:
             args = formatParm(commands)
@@ -98,7 +108,8 @@ class PictureRipperListener(Listener):
                 if not await self.Economy.Economy.pay(message.sender.id, self.Economy.capitalist, count * 5):
                     await self.notEnough(app, message, 5)
                     return
-            ripper: PictureRipperListener.ripperClass = self.ripperClass()
+            ripper = self.ripperClass()
+            print(ripper)
             gid = message.sender.group.id
             self.getRating(self.ym, gid)
             if args['key'] == 'n':
@@ -156,6 +167,9 @@ class PictureRipperListener(Listener):
                 await app.sendGroupMessage(message.sender.group, MeCh.create([Plain(e_message + t_message)]))
                 logger.warning(f'exceptions{exceptions} timeouts{timeouts}')
 
+    async def seTuTextHandler(self, app: Slave, message: GroupMessage):
+        await self.send(app, [RandomData()], message.sender.group, 'random picture')
+
     async def MSGDeaHandler(self, app: Slave, message: GroupMessage, commands):
         cmd = commands[0].upper()
         if not self.Permitted(message):
@@ -195,7 +209,10 @@ class PictureRipperListener(Listener):
     @staticmethod
     async def reCallYms(app: Slave, mid: int, t: int):
         await asyncio.sleep(t)
-        await app.revokeMessage(mid)
+        try:
+            await app.revokeMessage(mid)
+        except ClientResponseError:
+            logger.debug('recall fail, message may recalled by other admin')
 
     async def PicDeaHandler(self, app: Slave, message: GroupMessage):
         plains = message.messageChain.get(Plain)
@@ -211,16 +228,21 @@ class PictureRipperListener(Listener):
                         cache = self.GCache[(message.sender.group.id << 32) + quote.id]
                         image: Image = cache[0]
                         ext = cache[1]
+                        pid = cache[2]
+                        img_type = cache[3]
                     else:
                         try:
                             quote_source: GroupMessage = await app.messageFromId(quote.id)
                             image: Image = quote_source.messageChain.get(Image)[0]
                             ext = 'jpg'
+                            pid = image.imageId
+                            img_type = 'Other'
                         except UnknownTarget:
                             mec = MeCh.create([At(message.sender.id), Plain('不在本地与消息缓存中,无法保存')])
                             await app.sendGroupMessage(message.sender.group, mec)
                             return
-                    te = await saveUrlPicture(image.url, image.imageId, 'application/YummyPicture/save/pic', ext)
+                    name = f'{img_type}_{pid}'
+                    te = await saveUrlPicture(image.url, name, 'application/YummyPicture/save/pic', ext)
                     msg = [At(message.sender.id), Plain(te)]
                     await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
         elif any(text.__dict__['text'].strip() == '图源' for text in plains):
@@ -310,7 +332,7 @@ class PictureRipperListener(Listener):
 
     async def send(self, app: Slave, yummy: [], group: Group, prefix: str):
         try:
-            yande = yummy[0]
+            yande: PictureRipperListener.dataClass = yummy[0]
             img_byte: bytes = await yande.get()
             msg = [Image.fromUnsafeBytes(img_byte)]
             if self.ym == "ehentai" and hasattr(yande, 'gid'):
@@ -323,9 +345,9 @@ class PictureRipperListener(Listener):
                 self.GCache.pop(list(self.GCache.keys())[0])
                 logger.info('Cache is full,pop first one')
             ext = yande.url.split('.')[-1]
-            self.GCache[(group.id << 32) + bot_message.messageId] = [image, ext, yande.id]
+            self.GCache[(group.id << 32) + bot_message.messageId] = [image, ext, yande.id, yande.__class__.__name__]
             logger.info(f"{prefix}sent，tags：{yande.tags}")
-            await self.reCallYms(app, bot_message.messageId, 100)
+            await self.reCallYms(app, bot_message.messageId, 60)
         except asyncio.TimeoutError as e:
             logger.exception("[YummyPictures]: " + 'Timeout' + str(e))
             raise e
@@ -346,6 +368,7 @@ class PictureRipperListener(Listener):
 
     @staticmethod
     def ripeReg(message: str) -> list:
+        #  if match := reg.match(r'(?:.*?([\d一二两三四五六七八九十]*)张|来点)?(.{0,10}?)的?色图$', message):
         if match := reg.match(r'(?:.*?([\d一二两三四五六七八九十]*)张|来点)?(.{0,10}?)的?色图$', message):
             if (number := formatToNumber(match[1])) > 10:
                 number = 1

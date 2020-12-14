@@ -9,43 +9,34 @@ from application.YummyPicture.yummy.anipic import AnipicData
 
 
 class AnipicRipper(Ripper):
+
     token = ''
-    actions = {'new': 'pictures/view_posts',
-               'vote': 'vote',
-               'popular': 'pictures/view_posts',
-               'random': 'pictures/view_posts',
-               'search': 'pictures/view_posts',
-               'tags': 'tags'
-               }
-    periods = {'1d': '3',
-               '1w': '1',
-               '1m': '2',
-               '6m': '4',
-               '1y': '5',
-               '2y': '6',
-               '3y': '7'
-               }
-    rawUrl: str = 'https://anime-pictures.net/'
-    rip: str = 'https://anime-pictures.net/'
-    perPage: int = 60
+
+    def __init__(self):
+        super(AnipicRipper, self).__init__()
+        post: str = 'pictures/view_posts'
+        self.actions = dict(new=post, search=post, random=post, popular=post)
+        self.periods = {'1d': '3', '1w': '1', '1m': '2', '6m': '4', '1y': '5', '2y': '6', '3y': '7'}
+        self.rip = 'https://anime-pictures.net/'
+        self.per_page = 60
 
     async def __build(self):
         # build action
-        self.parse(self.actions[self.hasAction.value] + '/0?')
+        self.parse(self.actions[self.has_action.value] + '/0?')
         # build option
         # bind popular
-        if self.hasAction == RipperConst.POPULAR:
-            self.parm('order_by', 'views').parm('ldate', self.periods[self.hasPeriod])
+        if self.has_action == RipperConst.POPULAR:
+            self.parm('order_by', 'views').parm('ldate', self.periods[self.has_period])
         # build search
-        if self.hasAction == RipperConst.SEARCH:
+        if self.has_action == RipperConst.SEARCH:
             self.parm('search_tag', self.tags2str())
         # build random
-        if self.hasAction == RipperConst.RANDOM:
-            self.hasPage = random.randint(0, 5000)
+        if self.has_action == RipperConst.RANDOM:
+            self.has_page = random.randint(0, 5000)
         # '''others'''
 
         # build rating
-        if self.hasAction == self.actions[RipperConst.NEW.value]:  # post
+        if self.has_action == self.actions[RipperConst.NEW.value]:  # post
             self.__buildRating()
         # build token
         await self.__buildToken()
@@ -78,9 +69,6 @@ class AnipicRipper(Ripper):
             result.append(anipic)
         if connector:
             await connector.close()
-        self.hasParm = 0
-        self.hasAction = ''
-        self.rips.clear()
         return result
 
     async def __buildToken(self):
@@ -101,34 +89,34 @@ class AnipicRipper(Ripper):
             self.parm('token', self.token)
 
     def __buildVariant(self, offset: int = 0):
-        page = self.hasPage
+        page = self.has_page
         self.ripe = self.rip
-        if self.hasOffset + self.hasCount >= self.perPage:
+        if self.has_offset + self.has_count >= self.per_page:
             self.rip = self.rip.replace('s/0?', f's/{page}?')
-            self.rips[self.rip] = (self.hasOffset, self.perPage)
+            self.rips[self.rip] = (self.has_offset, self.per_page)
             self.ripe = self.ripe.replace('s/0?', f's/{page + 1}?')
-            self.rips[self.ripe] = (0, self.hasCount - (self.perPage - self.hasOffset))
+            self.rips[self.ripe] = (0, self.has_count - (self.per_page - self.has_offset))
         else:
             self.rip = self.rip.replace('s/0?', f's/{page}?')
-            self.rips[self.rip] = (self.hasOffset, self.hasCount + self.hasOffset)
+            self.rips[self.rip] = (self.has_offset, self.has_count + self.has_offset)
 
     def __buildRating(self) -> 'AnipicRipper':
-        if self.hasAction == RipperConst.NEW:
-            if ymConfig.getConfig('setting').get('enable_rating_check') != 'disable' and self.hasRating:
+        if self.has_action == RipperConst.NEW:
+            if ymConfig.getConfig('setting').get('enable_rating_check') != 'disable' and self.has_rating:
                 pos = self.rip.find('erotic')
                 if pos != -1:
-                    if self.hasRating != '2':
+                    if self.has_rating != '2':
                         self.rip = self.rip.replace('erotic', '')
                         self.parm('denied_tags', 'erotic')
                 else:
-                    if self.hasRating != '2':
+                    if self.has_rating != '2':
                         self.parm('denied_tags', 'erotic')
                 # info(f"new url {self.rip}")
         return self
 
     def tags2str(self) -> str:
         taster = ''
-        for tag in self.hasTags:
+        for tag in self.has_tags:
             if tag:
                 taster += tag + '%20'
         taster = taster[:-3].replace('&&', '%26%26')

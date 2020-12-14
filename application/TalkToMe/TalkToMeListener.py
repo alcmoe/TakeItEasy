@@ -6,12 +6,12 @@ from graia.application import GraiaMiraiApplication as Slave, GroupMessage, Uplo
 from graia.application.group import MemberPerm
 from graia.application.message.chain import MessageChain as MeCh, MessageChain
 from graia.application.message.elements.internal import At, Plain, Quote, Image
-
 from graia.broadcast import ExecutionStop, Broadcast
 from graia.broadcast.builtin.decoraters import Depend
 
 from . import ttkConfig, logger
 from utils.network import requestText, sentiment, refreshSentimentToken, json, request
+from application.YummyPicture.PictureRipperListener import PictureRipperListener
 from Listener import Listener
 
 
@@ -67,6 +67,14 @@ class TalkToMeListener(Listener):
                 raise ExecutionStop()
         else:
             raise ExecutionStop()
+
+    @staticmethod
+    def atOrQuoteFilter(message: MessageChain):
+        if not message.has(Quote) and not message.has(At):
+            raise ExecutionStop()
+        if plains := message.get(Plain):
+            if any(text.__dict__['text'].strip() in PictureRipperListener.QUOTE_COMMANDS for text in plains):
+                raise ExecutionStop()
 
     async def commandHandler(self, app: Slave, message: GroupMessage):
         cmd: str = message.messageChain.asDisplay().split(' ')[0]
@@ -154,32 +162,30 @@ class TalkToMeListener(Listener):
                         await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
                     else:
                         return
-        if self.Tick[message.sender.group.id] > 0:
-            if message.messageChain.has(Plain):
-                plain: Plain = message.messageChain.get(Plain)[0]
-                sent = await self.trySentiment(plain.text)
-                if sent[0] == 0:
-                    url = self.nm_api if sent[1] > 0.7 else self.nm_api
-                else:
-                    return
-                love = await requestText(url)
-                msg = [At(message.sender.id), Plain(love[0])]
-                await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
 
     async def shutTheFuckUp(self, app: Slave, message: GroupMessage):
         rands = [random.randint(0, 999) for _ in range(0, 4)]
-        if rands[0] < 20:
+        if rands[0] < 12:
             plain: Plain = message.messageChain.get(Plain)
             if plain:
                 await app.sendGroupMessage(message.sender.group.id, MeCh.create(plain))
-        if rands[1] < 20:
+        if rands[1] < 12:
             await app.sendGroupMessage(message.sender.group.id, MeCh.create([Plain('确实')]))
         if rands[2] < 12:
             if random.randint(1, 3) < 2:
                 msg = MeCh.create([At(message.sender.id), Plain('我爱你')])
                 await app.sendGroupMessage(message.sender.group.id, msg)
             else:
-                self.Tick[message.sender.group.id] = 2
+                if message.messageChain.has(Plain):
+                    plain: Plain = message.messageChain.get(Plain)[0]
+                    sent = await self.trySentiment(plain.text)
+                    if sent[0] == 0:
+                        url = self.nm_api if sent[1] > 0.7 else self.nm_api
+                    else:
+                        return
+                    love = await requestText(url)
+                    msg = [At(message.sender.id), Plain(love[0])]
+                    await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
         if rands[3] < 12:
             await self.sendPhilosophy(app, message)
 
@@ -189,6 +195,7 @@ class TalkToMeListener(Listener):
         try:
             return await sentiment(words, access_token)
         except KeyError:
+            logger.debug(words)
             api_key = ttkConfig.getConfig('setting').get('bd_sentiment_API_key')
             secret_key = ttkConfig.getConfig('setting').get('bd_sentiment_secret_key')
             new_token = await refreshSentimentToken(api_key, secret_key)

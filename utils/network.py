@@ -7,14 +7,14 @@ async def saveUrlPicture(url: str, name: str, folder: str = '', ext: str = '', c
         save_path = os.path.join(os.path.dirname(__file__), '..', folder)
         Path(save_path).mkdir(exist_ok=True, parents=True)
         if os.path.exists(Path(save_path).joinpath(f'{name}.{ext}')):
-            return '已经存下了-b'
+            return 'already saved -b'
         data = await request('GET', url, connector=connector)
         image: PImage = PImage.open(BytesIO(data))
         if connector:
             await connector.close()
         logger.debug(f'{name}.{ext}')
         image.save(Path(save_path).joinpath(f'{name}.{ext}'))
-        return '帮你存下了-b'
+        return 'saved -b'
     except ClientConnectorError:
         return '代理炸了-b'
     except IOError:

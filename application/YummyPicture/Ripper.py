@@ -5,21 +5,23 @@ from .exception.RipperExceptions import *
 
 
 class Ripper:
-    actions: dict
-    hasAction: Enum = None
-    hasTags: list
-    hasRating: str
-    hasCount: int
-    hasOffset: int
-    hasPage: int
-    hasPeriod: str
-    hasSpecific: list
-    hasParm: int = 0
-    rawUrl: str
-    rip: str
-    ripe: str
-    periods: dict
-    perPage: int
+
+    def __init__(self):
+        self.rips = {}
+        self.has_action: Enum = None
+        self.actions: dict = None
+        self.has_tags: list = None
+        self.has_rating: str = None
+        self.has_count: int = 0
+        self.has_offset: int = 0
+        self.has_page: int = 0
+        self.has_period: str = None
+        self.has_specific: list = None
+        self.has_parm: int = 0
+        self.rip: str = ''
+        self.ripe: str = None
+        self.periods: dict = None
+        self.per_page: int = None
 
     def new(self) -> 'Ripper':
         return self.action(RipperConst.NEW)
@@ -36,60 +38,51 @@ class Ripper:
     def detail(self) -> 'Ripper':
         return self.action(RipperConst.DETAIL)
 
-    def __init__(self):
-        self.rips = {}
-
     def action(self, action) -> 'Ripper':
-        if action.name in list(RipperConst.__members__.keys()) and not self.hasAction:
-            self.hasAction = action
+        if action.name in list(RipperConst.__members__.keys()) and not self.has_action:
+            self.has_action = action
             return self
         else:
             raise RipperUnknownActionException(action)
 
     def offset(self, offset: str) -> 'Ripper':
-        self.hasPage = int(offset) // self.perPage
-        self.hasOffset = int(offset) % self.perPage
+        self.has_page = int(offset) // self.per_page
+        self.has_offset = int(offset) % self.per_page
         return self
 
     def tags(self, tags: []) -> 'Ripper':
-        self.verifyAction(self.hasAction, 'TAGS')
-        self.hasTags = tags
+        self.verifyAction(self.has_action, 'TAGS')
+        self.has_tags = tags
         return self
 
     def tags2str(self) -> str:
         pass
 
     def count(self, count: int) -> 'Ripper':
-        self.hasCount = count
+        self.has_count = count
         return self
 
     def period(self, period: str) -> 'Ripper':
         self.verifyAction(RipperConst.POPULAR, 'PERIOD')
         if period in self.periods.keys():
-            self.hasPeriod = period
+            self.has_period = period
             return self
         else:
             raise RipperNoPeriodException(period)
 
     def specific(self, specific: []):
-        self.hasSpecific = specific
+        self.has_specific = specific
         return
 
     def verifyAction(self, action: str, method):
-        if self.hasAction != action:
+        if self.has_action != action:
             raise RipperErrorActionException(action, method)
 
     async def get(self) -> 'list':
         pass
 
     def rating(self, rating: str) -> 'Ripper':
-        self.hasRating = rating
-        return self
-
-    def clear(self) -> 'Ripper':
-        self.rip = self.rawUrl
-        self.hasAction = ''
-        self.hasParm = 0
+        self.has_rating = rating
         return self
 
     def parse(self, parse: str, variant: bool = False) -> 'Ripper':
@@ -100,13 +93,13 @@ class Ripper:
         return self
 
     def parm(self, k: str, v: str = '', variant: bool = False) -> 'Ripper':
-        if self.hasAction:
+        if self.has_action:
             if v:
                 v = "=" + v
-            if self.hasParm:
+            if self.has_parm:
                 k = "&" + k
             if not variant:
-                self.hasParm += 1
+                self.has_parm += 1
             return self.parse(k + v, variant)
         else:
             raise RipperNoActionException
@@ -115,13 +108,13 @@ class Ripper:
         pass
 
     def _buildVariant(self, offset: int = 0):
-        page = self.hasPage + offset
+        page = self.has_page + offset
         self.ripe = self.rip
-        if self.hasOffset + self.hasCount > self.perPage:
+        if self.has_offset + self.has_count > self.per_page:
             self.parm('page', str(page))
-            self.rips[self.rip] = (self.hasOffset, self.perPage)
+            self.rips[self.rip] = (self.has_offset, self.per_page)
             self.parm('page', str(int(page) + 1), True)
-            self.rips[self.ripe] = (0, self.hasCount - (self.perPage - self.hasOffset))
+            self.rips[self.ripe] = (0, self.has_count - (self.per_page - self.has_offset))
         else:
             self.parm('page', str(page))
-            self.rips[self.rip] = (self.hasOffset, self.hasCount + self.hasOffset)
+            self.rips[self.rip] = (self.has_offset, self.has_count + self.has_offset)
