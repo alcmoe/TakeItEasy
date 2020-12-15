@@ -33,7 +33,7 @@ class URaNaiListener(Listener):
             await self.commandHandler(app, message)
 
     async def commandHandler(self, app: Slave, message: GroupMessage):
-        cmd: str = message.messageChain.asDisplay().split(' ')[0]
+        cmd: str = message.messageChain.__dict__.get('cmd')
         random.seed(datetime.now().strftime('%Y%m%d'))
         pack = 'princess/' if random.randint(0, 1) else 'kiZuNaAi/'
         random.seed(None)

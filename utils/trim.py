@@ -53,3 +53,8 @@ def search(raw: list, key: str) -> dict:
         offset = 0
         raw.pop(0)
     return {'key': key, 'tags': raw, 'offset': offset, 'count': limit, 'period': ''.join(raw) if ''.join(raw) else '1d'}
+
+
+def permissionGt(permission1: str, permission2: str):
+    per_dict: dict = dict(MEMBER=1, ADMINISTRATOR=2, OWNER=3)
+    return per_dict.get(permission1) > per_dict.get(permission2)

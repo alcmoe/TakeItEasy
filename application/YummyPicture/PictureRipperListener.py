@@ -320,15 +320,15 @@ class PictureRipperListener(Listener):
                 qid: int = quote.id
                 sender: int = quote.senderId
                 qq = app.connect_info.account
-                if sender != qq and message.sender.permission == "MEMBER":
+                if sender != qq and message.sender.permission.value == "MEMBER":
                     msg = [At(message.sender.id), Plain('你不喜欢也没办法')]
                     await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
                 else:
                     await app.sendGroupMessage(message.sender.group, MeCh.create([Plain('行')]))
                     await self.reCallYms(app, qid, 1)
-                    if message.sender.permission == "OWNER" or (  # b b m
-                            message.sender.permission != "MEMBER" and message.sender.permission == "MEMBER"):
-                        await self.reCallYms(app, message.messageChain.get(Source), 1)
+                    if permissionGt(message.sender.group.accountPerm.value, message.sender.permission.value):
+                        source: Source = message.messageChain.get(Source)[0]
+                        await self.reCallYms(app, source.id, 1)
 
     async def send(self, app: Slave, yummy: [], group: Group, prefix: str):
         try:

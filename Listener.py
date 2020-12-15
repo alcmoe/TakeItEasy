@@ -17,6 +17,8 @@ class Listener:
         dis: str = message.asDisplay().split(' ')
         if dis[0].upper() not in self.APP_COMMANDS:
             raise ExecutionStop()
+        else:
+            message.__dict__.update(cmd=dis[0].upper())
 
     @staticmethod
     def atFilter(message: MessageChain):

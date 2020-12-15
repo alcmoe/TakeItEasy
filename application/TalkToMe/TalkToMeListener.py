@@ -26,12 +26,12 @@ class TalkToMeListener(Listener):
         Economy = None
 
     APP_COMMANDS = ['啊？', '吃什么', '不']
-    Tick = {}
-    BlockedKeywords = ['翻译翻译']
+    APP_QUOTE_AT_COMMANDS = ['骂他', '翻译翻译']
     nm_api = ttkConfig.getConfig('setting').get('nm_api')
     n_api = ttkConfig.getConfig('setting').get('n_api')
     chp_api = ttkConfig.getConfig('setting').get('chp_api')
     fy_api = ttkConfig.getConfig('setting').get('fy_api')
+    capitalist = 0
 
     def run(self):
         @self.bcc.receiver(GroupMessage, headless_decoraters=[Depend(self.atOrQuoteFilter)])
@@ -65,6 +65,7 @@ class TalkToMeListener(Listener):
             cmd = cmd[0].upper()
             if not any(app_cmd in cmd for app_cmd in self.APP_COMMANDS):
                 raise ExecutionStop()
+            message.__dict__.update(cmd=cmd)
         else:
             raise ExecutionStop()
 
@@ -72,12 +73,22 @@ class TalkToMeListener(Listener):
     def atOrQuoteFilter(message: MessageChain):
         if not message.has(Quote) and not message.has(At):
             raise ExecutionStop()
+        cmd = None
         if plains := message.get(Plain):
-            if any(text.__dict__['text'].strip() in PictureRipperListener.QUOTE_COMMANDS for text in plains):
-                raise ExecutionStop()
+            for text in plains:
+                if text.__dict__['text'].strip() in PictureRipperListener.QUOTE_COMMANDS:
+                    raise ExecutionStop()
+                if text.__dict__['text'].strip() in TalkToMeListener.APP_QUOTE_AT_COMMANDS:
+                    cmd = text.__dict__['text'].strip().upper() if not cmd else cmd
+        at: At
+        quote: Quote
+        target = [at.target for at in message.get(At)] + [quote.senderId for quote in message.get(Quote)]
+        quote = message.get(Quote)[0] if message.get(Quote) else []
+        text = message.get(Plain) + (quote.origin.get(Plain) if quote else quote)
+        message.__dict__.update(target=target, cmd=cmd, text=text)
 
     async def commandHandler(self, app: Slave, message: GroupMessage):
-        cmd: str = message.messageChain.asDisplay().split(' ')[0]
+        cmd: str = message.messageChain.__dict__.get('cmd')
         if cmd == '啊？':
             await self.sendPhilosophy(app, message)
         if '不' in cmd and len(cmd) > 2:
@@ -97,8 +108,12 @@ class TalkToMeListener(Listener):
 
     async def atOrQuoteHandler(self, app, message: GroupMessage):
         logger.debug('TalkToMe at handler act')
-        cmd: str = message.messageChain.asDisplay().split(' ')[0]
-        if cmd == '骂他':
+        cmd: str = message.messageChain.__dict__.get('cmd')
+        target = list(set(message.messageChain.__dict__.get('target')))
+        if fencing := app.connect_info.account in target:
+            target.remove(app.connect_info.account)
+
+        if cmd == self.APP_QUOTE_AT_COMMANDS[0]:
             if self.Economy:
                 if not await self.Economy.Economy.pay(message.sender.id, self.Economy.capitalist, 500):
                     info: dict = await self.Economy.Economy.money(message.sender.id)
@@ -110,58 +125,39 @@ class TalkToMeListener(Listener):
                 if message.sender.permission == MemberPerm.Member:
                     await app.sendGroupMessage(message.sender.group, MeCh.create([Plain('你骂你爹呢')]))
                     return
-            if ats := message.messageChain.get(At):
-                for a in range(0, random.randint(2, 10)):
-                    msg = ats.copy()
+            if target:
+                for _ in range(0, random.randint(2, 10)):
+                    msg = [At(target) for target in target]
                     love = await requestText(self.nm_api)
                     msg.append(Plain(love[0]))
                     await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
                     await asyncio.sleep(2)
                     msg.clear()
-
-        if message.sender.group.id in self.Tick.keys():
-            self.Tick[message.sender.group.id] -= 1
-        else:
-            self.Tick[message.sender.group.id] = 0
-        bot_id = app.connect_info.account
-        fencing: bool = False
-        quote: Quote = None
-        if ats := message.messageChain.get(At):
-            at: At
-            fencing = True if any(at.target == bot_id for at in ats) else False
-        if qts := message.messageChain.get(Quote):
-            qt: Quote
-            quote = qts[0]
-            fencing = True if any(qt.senderId == bot_id for qt in qts) else False
+            return
+        if cmd == self.APP_QUOTE_AT_COMMANDS[1]:
+            if text := self.getFirstTrimText(message.messageChain.__dict__.get('text')):
+                items: dict = (await requestText(self.fy_api, 'POST', data={'text': text}, raw=False))[0]
+                msg = [Plain('能不能好好说话')]
+                for item in items:
+                    if 'trans' not in item.keys():
+                        continue
+                    msg.append(Plain(f"\n{item['name']}->{json.dumps(item['trans'], ensure_ascii=False)}"))
+                await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
+            return
         if fencing:  # call bot
-            if plains := message.messageChain.get(Plain):
-                if any(plain.text.strip() in self.BlockedKeywords for plain in plains):
-                    if quote:
-                        if any('翻译翻译' in plain.text.strip() for plain in plains):
-                            if text := self.getFirstTrimText(quote.origin.get(Plain)):
-                                items: dict = \
-                                    (await requestText(self.fy_api, 'POST', data={'text': text}, raw=False))[0]
-                                msg = [Plain('能不能好好说话')]
-                                for item in items:
-                                    if 'trans' not in item.keys():
-                                        continue
-                                    msg.append(
-                                        Plain(f"\n{item['name']}->{json.dumps(item['trans'], ensure_ascii=False)}"))
-                                await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
-                else:  # fencing
-                    if text := self.getFirstTrimText(plains):
-                        sent = await self.trySentiment(text)
-                        if sent[0] == 0:
-                            url = self.nm_api if sent[1] > 0.5 else self.nm_api
-                        elif sent[0] == 2:
-                            url = self.chp_api
-                        else:
-                            return
-                        love = await requestText(url)
-                        msg = [At(message.sender.id), Plain(love[0])]
-                        await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
-                    else:
-                        return
+            if text := self.getFirstTrimText(message.messageChain.__dict__.get('text')):
+                sent = await self.trySentiment(text)
+                if sent[0] == 0:
+                    url = self.nm_api if sent[1] > 0.5 else self.nm_api
+                elif sent[0] == 2:
+                    url = self.chp_api
+                else:
+                    return
+                love = await requestText(url)
+                msg = [At(message.sender.id), Plain(love[0])]
+                await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
+            else:
+                return
 
     async def shutTheFuckUp(self, app: Slave, message: GroupMessage):
         rands = [random.randint(0, 999) for _ in range(0, 4)]
@@ -219,9 +215,9 @@ class TalkToMeListener(Listener):
 
     @staticmethod
     def getFirstTrimText(plains: [Plain]) -> str:
-        text = ''
+        text = None
         for plain in plains:
-            if plain.text.strip():
+            if plain.text.strip() and plain.text.strip() not in TalkToMeListener.APP_QUOTE_AT_COMMANDS:
                 text = plain.text.strip()
                 break
         return text
