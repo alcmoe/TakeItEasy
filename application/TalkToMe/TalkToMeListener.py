@@ -2,6 +2,9 @@ import os
 import asyncio
 import random
 
+from graia.application.exceptions import AccountMuted
+from xpinyin import Pinyin
+
 from graia.application import GraiaMiraiApplication as Slave, GroupMessage, UploadMethods
 from graia.application.group import MemberPerm
 from graia.application.message.chain import MessageChain as MeCh, MessageChain
@@ -12,11 +15,13 @@ from graia.broadcast.builtin.decoraters import Depend
 from . import ttkConfig, logger
 from utils.network import requestText, sentiment, refreshSentimentToken, json, request
 from application.YummyPicture.PictureRipperListener import PictureRipperListener
+from .AbstractWord import emj
 from Listener import Listener
 
 
 class TalkToMeListener(Listener):
     bcc: Broadcast
+    command: dict = dict()
     try:
         from application.Economy import Economy
 
@@ -44,7 +49,10 @@ class TalkToMeListener(Listener):
 
         @self.bcc.receiver(GroupMessage)
         async def groupMessageHandler(app: Slave, message: GroupMessage):
-            await self.shutTheFuckUp(app, message)
+            try:
+                await self.shutTheFuckUp(app, message)
+            except AccountMuted:
+                logger.debug('我被狗禁言了')
             if self.Economy:
                 add = 0
                 if images := message.messageChain.get(Image):
@@ -65,12 +73,11 @@ class TalkToMeListener(Listener):
             cmd = cmd[0].upper()
             if not any(app_cmd in cmd for app_cmd in self.APP_COMMANDS):
                 raise ExecutionStop()
-            message.__dict__.update(cmd=cmd)
+            TalkToMeListener.command.update(cmd=cmd)
         else:
             raise ExecutionStop()
 
-    @staticmethod
-    def atOrQuoteFilter(message: MessageChain):
+    def atOrQuoteFilter(self, message: MessageChain):
         if not message.has(Quote) and not message.has(At):
             raise ExecutionStop()
         cmd = None
@@ -85,14 +92,14 @@ class TalkToMeListener(Listener):
         target = [at.target for at in message.get(At)] + [quote.senderId for quote in message.get(Quote)]
         quote = message.get(Quote)[0] if message.get(Quote) else []
         text = message.get(Plain) + (quote.origin.get(Plain) if quote else quote)
-        message.__dict__.update(target=target, cmd=cmd, text=text)
+        self.command.update(target=target, cmd=cmd, text=text)
 
     async def commandHandler(self, app: Slave, message: GroupMessage):
-        cmd: str = message.messageChain.__dict__.get('cmd')
+        cmd: str = TalkToMeListener.command.get('cmd')
         if cmd == '啊？':
             await self.sendPhilosophy(app, message)
         if '不' in cmd and len(cmd) > 2:
-            if (pos := cmd.find('不')) != -1:
+            if (pos := cmd.find('不')) != -1 and pos != len(cmd) - 1:
                 if cmd[pos - 1] == cmd[pos + 1]:
                     msg = [Plain(cmd[pos - 1] if random.randint(0, 1) else f'不{cmd[pos - 1]}')]
                     await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
@@ -108,8 +115,8 @@ class TalkToMeListener(Listener):
 
     async def atOrQuoteHandler(self, app, message: GroupMessage):
         logger.debug('TalkToMe at handler act')
-        cmd: str = message.messageChain.__dict__.get('cmd')
-        target = list(set(message.messageChain.__dict__.get('target')))
+        cmd: str = TalkToMeListener.command.get('cmd')
+        target = list(set(TalkToMeListener.command.get('target')))
         if fencing := app.connect_info.account in target:
             target.remove(app.connect_info.account)
 
@@ -135,7 +142,7 @@ class TalkToMeListener(Listener):
                     msg.clear()
             return
         if cmd == self.APP_QUOTE_AT_COMMANDS[1]:
-            if text := self.getFirstTrimText(message.messageChain.__dict__.get('text')):
+            if text := self.getFirstTrimText(self.command.get('text')):
                 items: dict = (await requestText(self.fy_api, 'POST', data={'text': text}, raw=False))[0]
                 msg = [Plain('能不能好好说话')]
                 for item in items:
@@ -145,10 +152,10 @@ class TalkToMeListener(Listener):
                 await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
             return
         if fencing:  # call bot
-            if text := self.getFirstTrimText(message.messageChain.__dict__.get('text')):
-                sent = await self.trySentiment(text)
+            if text := self.command.get('text'):
+                sent = await self.trySentiment(text[0].text)
                 if sent[0] == 0:
-                    url = self.nm_api if sent[1] > 0.5 else self.nm_api
+                    url = self.nm_api if sent[1] > 0.5 else self.n_api
                 elif sent[0] == 2:
                     url = self.chp_api
                 else:
@@ -162,9 +169,10 @@ class TalkToMeListener(Listener):
     async def shutTheFuckUp(self, app: Slave, message: GroupMessage):
         rands = [random.randint(0, 999) for _ in range(0, 4)]
         if rands[0] < 12:
-            plain: Plain = message.messageChain.get(Plain)
-            if plain:
-                await app.sendGroupMessage(message.sender.group.id, MeCh.create(plain))
+            if plains := message.messageChain.get(Plain):
+                is_abs: bool = random.randint(1, 10) < 3
+                plains = [Plain(self.toAbstract(' '.join([plain.text for plain in plains])))] if is_abs else plains
+                await app.sendGroupMessage(message.sender.group.id, MeCh.create(plains))
         if rands[1] < 12:
             await app.sendGroupMessage(message.sender.group.id, MeCh.create([Plain('确实')]))
         if rands[2] < 12:
@@ -180,6 +188,8 @@ class TalkToMeListener(Listener):
                     else:
                         return
                     love = await requestText(url)
+                    if random.randint(1, 10) < 4:
+                        love[0] = self.toAbstract(love[0])
                     msg = [At(message.sender.id), Plain(love[0])]
                     await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
         if rands[3] < 12:
@@ -189,7 +199,8 @@ class TalkToMeListener(Listener):
     async def trySentiment(words: str) -> list:
         access_token = ttkConfig.getConfig('setting').get('bd_sentiment_access_token')
         try:
-            return await sentiment(words, access_token)
+            if words:
+                return await sentiment(words, access_token)
         except KeyError:
             logger.debug(words)
             api_key = ttkConfig.getConfig('setting').get('bd_sentiment_API_key')
@@ -221,3 +232,25 @@ class TalkToMeListener(Listener):
                 text = plain.text.strip()
                 break
         return text
+
+    @staticmethod
+    def toAbstract(text: str):
+        py = Pinyin()
+        abstract_text: str = ''
+        index = 0
+        while index < len(text):
+            if index < len(text) - 1:
+                double_word = py.get_pinyin(text[index: index + 2])
+                if abstract := emj.get(double_word):
+                    abstract_text += abstract
+                    index += 2
+                    continue
+            single_word = py.get_pinyin(text[index])
+            if abstract := emj.get(single_word):
+                abstract = abstract if isinstance(abstract, str) else random.choice(abstract)
+                abstract_text += abstract
+                index += 1
+                continue
+            abstract_text += text[index]
+            index += 1
+        return abstract_text

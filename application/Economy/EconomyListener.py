@@ -11,6 +11,7 @@ from . import Economy as EconomyAPI
 
 class EconomyListener(Listener):
     APP_COMMANDS = ['.MM', '.PM']
+    command: dict = dict()
 
     def run(self):
 

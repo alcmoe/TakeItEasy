@@ -4,7 +4,7 @@ from application.YummyPicture import logger
 class RipperNoActionException(Exception):
 
     def __str__(self):
-        logger.exception("This is not action in ripper")
+        logger.error("This is not action in ripper")
 
 
 class RipperUnknownActionException(Exception):
@@ -12,7 +12,7 @@ class RipperUnknownActionException(Exception):
         self.action = action
 
     def __str__(self):
-        logger.exception("Unknown action" + self.action)
+        logger.error("Unknown action " + self.action)
 
 
 class RipperErrorActionException(Exception):
@@ -21,7 +21,7 @@ class RipperErrorActionException(Exception):
         self.parm = parm
 
     def __str__(self):
-        logger.exception("Error action" + self.action + "for parm" + self.parm)
+        logger.error("Error action " + self.action + " for parm " + self.parm)
 
 
 class RipperNoPeriodException(Exception):
@@ -29,4 +29,4 @@ class RipperNoPeriodException(Exception):
         self.period = period
 
     def __str__(self):
-        logger.exception("no period" + self.period + "in periods")
+        logger.error("no period " + self.period + "in periods")

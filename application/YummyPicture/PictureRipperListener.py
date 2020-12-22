@@ -109,7 +109,6 @@ class PictureRipperListener(Listener):
                     await self.notEnough(app, message, 5)
                     return
             ripper = self.ripperClass()
-            print(ripper)
             gid = message.sender.group.id
             self.getRating(self.ym, gid)
             if args['key'] == 'n':

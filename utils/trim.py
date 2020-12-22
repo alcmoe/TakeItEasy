@@ -1,9 +1,12 @@
+from . import date, datetime, time
+
 PATH_RES = 'res/'
 PATH_IMAGE = 'image/'
 PATH_FONT = 'font/'
 
 
 def formatParm(raw: [str]):
+    raw = list(filter(None, raw))
     if raw[0][3:] and not raw[0][3:].isnumeric():
         return
     if raw[0][:3] == './N':
@@ -58,3 +61,11 @@ def search(raw: list, key: str) -> dict:
 def permissionGt(permission1: str, permission2: str):
     per_dict: dict = dict(MEMBER=1, ADMINISTRATOR=2, OWNER=3)
     return per_dict.get(permission1) > per_dict.get(permission2)
+
+
+def getTimeCircle(h: int = 0, m: int = 0, s: int = 0) -> int:
+    today = date.today()
+    next_clock = datetime(today.year, today.month, today.day, h, m, s)
+    target_timestamp = next_clock.timestamp()
+    diff = target_timestamp - time.time()
+    return (24 * 60 * 60 + diff) if diff < 0 else diff

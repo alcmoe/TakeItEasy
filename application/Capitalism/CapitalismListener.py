@@ -17,6 +17,7 @@ class CapitalismListener(Listener):
     APP_COMMANDS = ['赛马', '.SK', '.SKI', '.加攻', '.加血', '.加甲', '.加敏捷', '.加幸运']
     HORSE_ADD_PERK = ['.加攻', '.加血', '.加甲', '.加敏捷', '.加幸运']
     HR = 'horse_racing'
+    command: dict = dict()
 
     def run(self):
         @self.bcc.receiver(GroupMessage, headless_decoraters=[Depend(self.cmdFilter)])

@@ -18,6 +18,7 @@ from utils.trim import PATH_IMAGE, PATH_RES, PATH_FONT
 class URaNaiListener(Listener):
     APP_COMMANDS = ['运势', '转运']
     PATH_URN = PATH_RES + PATH_IMAGE + 'URaNai/'
+    command: dict = dict()
 
     try:
         from application.Economy import Economy
@@ -33,7 +34,7 @@ class URaNaiListener(Listener):
             await self.commandHandler(app, message)
 
     async def commandHandler(self, app: Slave, message: GroupMessage):
-        cmd: str = message.messageChain.__dict__.get('cmd')
+        cmd: str = self.command.get('cmd')
         random.seed(datetime.now().strftime('%Y%m%d'))
         pack = 'princess/' if random.randint(0, 1) else 'kiZuNaAi/'
         random.seed(None)

@@ -42,7 +42,10 @@ async def fetch(session, url, name, bar=None, headers=None):
 async def saveUrlVideo(url: str, name: str, connector: ProxyConnector):
     async with aiohttp.ClientSession(connector=connector) as session:
         req = await fetch(session, url, name)
-        file_size = int(req.headers['content-length'])
+        if file_size := req.headers.get('content-length'):
+            file_size = int(file_size)
+        else:
+            return False
         logger.info(f"{name} の length : {file_size}")
         if Path(name).is_file():
             first_byte = os.path.getsize(name)
@@ -53,6 +56,7 @@ async def saveUrlVideo(url: str, name: str, connector: ProxyConnector):
         header = {"Range": f"bytes={first_byte}-{file_size}"}
         bar = tqdm(total=file_size, initial=first_byte, unit='B', unit_scale=True, desc=name)
         await fetch(session, url, name, bar=bar, headers=header)
+        return True
 
 
 async def requestText(url: str, method: str = 'GET', headers: dict = None, params: dict = None, body=None,
