@@ -277,6 +277,10 @@ class Economy:
         return credit_pay['base_balance'] + users[account]['credit_pay_adjust'] - users[account]['credit_pay_use']
 
     @staticmethod
+    async def users():
+        return users
+
+    @staticmethod
     async def save(option=''):
         await ecConfig.save(option)
 

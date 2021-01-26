@@ -3,7 +3,7 @@ from Logger import APPLogger
 from .InitConfig import contents
 
 app: str = 'TalkToMe'
-logger = APPLogger(app)
+logger = APPLogger(app, 36)
 
 configs = {
     'setting': "setting.json",

@@ -28,7 +28,7 @@ class EhentaiRipper(Ripper):
         # build action
         self.parse(self.actions[self.has_action.value] + '?')
         # build option
-        self.per_page = self.per_pages[self.has_action]
+        self.per_page = self.per_pages[self.has_action.value]
         # ...
         # build search
         if self.has_action == RipperConst.SEARCH:
@@ -77,7 +77,7 @@ class EhentaiRipper(Ripper):
                     ehentai.__dict__.update({'preview': url})
                     result.append(ehentai)
             else:
-                rm = self.per_pages[self.has_action]
+                rm = self.per_pages[self.has_action.value]
                 tables = sear[0].contents[1:rm + 1]
                 tables += sear[0].contents[rm + 2:]
                 tables = tables[t[0]:t[1]]
@@ -128,7 +128,7 @@ class EhentaiRipper(Ripper):
         return taster[:-1]
 
     def offset(self, offset: str) -> 'EhentaiRipper':
-        self.per_page = self.per_pages[self.has_action]
+        self.per_page = self.per_pages[self.has_action.value]
         self.has_page = int(offset) // self.per_page
         self.has_offset = int(offset) % self.per_page
         return self
@@ -146,5 +146,5 @@ class EhentaiRipper(Ripper):
             self.rips[self.rip] = (self.has_offset, self.has_count + self.has_offset)
 
     def period(self, period: str) -> 'EhentaiRipper':
-        self.per_page = self.per_pages[self.has_action]
+        self.per_page = self.per_pages[self.has_action.value]
         return self

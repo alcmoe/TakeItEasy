@@ -3,7 +3,7 @@ from Logger import APPLogger
 from .InitConfig import contents
 
 app: str = 'VideoRipper'
-logger = APPLogger(app)
+logger = APPLogger(app, 34)
 
 
 configs = {

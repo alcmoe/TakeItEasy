@@ -23,6 +23,13 @@ async def saveUrlPicture(url: str, name: str, folder: str = '', ext: str = '', c
         raise e
 
 
+async def saveBytesPicture(bytes_: bytes, name: str, folder: str = '', ext: str = '', ):
+    image: PImage = PImage.open(BytesIO(bytes_))
+    save_path = os.path.join(os.path.dirname(__file__), '..', folder)
+    image.save(Path(save_path).joinpath(f'{name}.{ext}'))
+    logger.info('save ' + name)
+
+
 async def fetch(session, url, name, bar=None, headers=None):
     if headers:
         async with session.get(url, headers=headers) as req:

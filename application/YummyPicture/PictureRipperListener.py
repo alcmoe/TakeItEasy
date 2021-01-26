@@ -6,7 +6,7 @@ from aiohttp import ClientResponseError
 from graia.application import GraiaMiraiApplication as Slave, GroupMessage, enter_message_send_context, UploadMethods
 from graia.application.message.chain import MessageChain as MeCh, MessageChain
 from graia.application.group import Group
-from graia.application.message.elements.internal import At, Plain, Image, Quote, Source
+from graia.application.message.elements.internal import At, Plain, Image, Quote, Source, Xml
 from graia.application.exceptions import UnknownTarget
 from graia.broadcast import Broadcast, ExecutionStop
 from graia.broadcast.builtin.decoraters import Depend
@@ -22,12 +22,13 @@ from application.YummyPicture.JASearcher import JASearcher
 
 class PictureRipperListener(Listener):
     bcc: Broadcast
+    command: dict = dict()
     try:
         from application.Economy import Economy
-        from application.Economy.EconomyListener import notEnough
-
+        from application.Economy.EconomyListener import EconomyListener
         Economy = Economy
-        price = 5
+        notEnough = EconomyListener.notEnough
+        price = 25
     except ImportError:
         Economy = None
         notEnough = None
@@ -59,7 +60,7 @@ class PictureRipperListener(Listener):
 
         @self.bcc.receiver(GroupMessage, headless_decoraters=[Depend(self.seTuTextFilter)])
         async def groupSeTuTextHandler(app: Slave, message: GroupMessage):
-            await self.seTuTextHandler(app, message)
+            await self.RipperHandler(app, message, self.command['se_tu'])
 
     def cmdFilter(self, message: MessageChain):
         message: str = message.asDisplay()
@@ -80,6 +81,7 @@ class PictureRipperListener(Listener):
     def seTuTextFilter(self, message: MessageChain):
         message: str = message.asDisplay()
         match = self.ripeReg(message)
+        self.command['se_tu'] = match
         if not match:
             raise ExecutionStop()
 
@@ -89,8 +91,8 @@ class PictureRipperListener(Listener):
 
     def getRating(self, source, group, force=False):
         if group not in self.ratings.keys() or force:
-            level = ymConfig.getConfig('setting').get('group_rate')[str(group)] if str(group) in ymConfig.getConfig(
-                'setting').get('group_rate').keys() else ymConfig.getConfig('setting').get('rating')
+            if (level := ymConfig.getConfig('setting').get('group_rate').get(str(group))) is None:
+                level = ymConfig.getConfig('setting').get('rating')
             rs = {k: v for k, v in ymConfig.getConfig(source).get('rating').items() if v <= level}
             rating = sorted(rs.items(), key=lambda d: d[1], reverse=True)
             self.ratings[group] = rating[0][0]
@@ -105,7 +107,7 @@ class PictureRipperListener(Listener):
                 return
             if self.Economy:
                 count: int = args['count']
-                if not await self.Economy.Economy.pay(message.sender.id, self.Economy.capitalist, count * 5):
+                if not await self.Economy.Economy.pay(message.sender.id, self.Economy.capitalist, count * self.price):
                     await self.notEnough(app, message, 5)
                     return
             ripper = self.ripperClass()
@@ -211,7 +213,7 @@ class PictureRipperListener(Listener):
         try:
             await app.revokeMessage(mid)
         except ClientResponseError:
-            logger.debug('recall fail, message may recalled by other admin')
+            logger.debug('recall fail, message may recalled by other admins')
 
     async def PicDeaHandler(self, app: Slave, message: GroupMessage):
         plains = message.messageChain.get(Plain)
@@ -330,6 +332,11 @@ class PictureRipperListener(Listener):
                         await self.reCallYms(app, source.id, 1)
 
     async def send(self, app: Slave, yummy: [], group: Group, prefix: str):
+        xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+              <msg serviceID="5" templateID="1" action="test" brief="[色图]" sourceMsgId="0" url="" flag="2" adverSign="0" multiMsgFlag="0">
+              <item layout="2"><image uuid="$md5.png" md5="$md5" GroupFiledid="0" filesize="38504" local_path="application/YummyPicture/save/pic/Other_-1.jpg" minWidth="200" minHeight="200" maxWidth="2048" maxHeight="2048" /></item>
+              <source name="我把你妈杀了" icon="https://qzs.qq.com/ac/qzone_v5/client/auth_icon.png" action="" appid="-1" />
+              </msg>'''
         try:
             yande: PictureRipperListener.dataClass = yummy[0]
             img_byte: bytes = await yande.get()
@@ -339,7 +346,10 @@ class PictureRipperListener(Listener):
             with enter_message_send_context(UploadMethods.Group):
                 msg_chain = await MeCh.create(msg).build()
             image: Image = msg_chain.__root__[0]
-            bot_message = await app.sendGroupMessage(group, msg_chain)  # At(sender.id), Plain(prefix_ + data_.purl),
+            md5 = image.imageId[1:37].replace('-', '')
+            xml = xml.replace('$md5', md5)
+            # bot_message = await app.sendGroupMessage(group, MeCh.create([Xml(xml)]))
+            bot_message = await app.sendGroupMessage(group, msg_chain)
             if len(self.GCache) >= 150:
                 self.GCache.pop(list(self.GCache.keys())[0])
                 logger.info('Cache is full,pop first one')
@@ -349,10 +359,8 @@ class PictureRipperListener(Listener):
             await self.reCallYms(app, bot_message.messageId, 60)
         except asyncio.TimeoutError as e:
             logger.exception("[YummyPictures]: " + 'Timeout' + str(e))
-            raise e
         except ValueError as e:
             logger.exception("[YummyPictures]: " + 'Size check failed' + str(e))
-            raise e
 
     async def initYummyPicture(self):
         ymConfig.reload()

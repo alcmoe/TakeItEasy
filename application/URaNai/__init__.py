@@ -3,7 +3,7 @@ from Logger import APPLogger
 from .InitConfig import contents
 
 app: str = 'UraNai'
-logger = APPLogger(app)
+logger = APPLogger(app, 35)
 
 configs = {
     'config': "config.json"

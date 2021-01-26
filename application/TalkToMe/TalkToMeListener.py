@@ -16,6 +16,7 @@ from . import ttkConfig, logger
 from utils.network import requestText, sentiment, refreshSentimentToken, json, request
 from application.YummyPicture.PictureRipperListener import PictureRipperListener
 from .AbstractWord import emj
+from .TrashTalking import trash_talk
 from Listener import Listener
 
 
@@ -30,7 +31,7 @@ class TalkToMeListener(Listener):
     except ImportError:
         Economy = None
 
-    APP_COMMANDS = ['啊？', '吃什么', '不']
+    APP_COMMANDS = ['啊？', '吃什么', '不', '群号', '儿子', '步川内焅']
     APP_QUOTE_AT_COMMANDS = ['骂他', '翻译翻译']
     nm_api = ttkConfig.getConfig('setting').get('nm_api')
     n_api = ttkConfig.getConfig('setting').get('n_api')
@@ -103,6 +104,15 @@ class TalkToMeListener(Listener):
                 if cmd[pos - 1] == cmd[pos + 1]:
                     msg = [Plain(cmd[pos - 1] if random.randint(0, 1) else f'不{cmd[pos - 1]}')]
                     await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
+        if cmd == '群号':
+            await app.sendGroupMessage(message.sender.group, MeCh.create([Plain(f'{message.sender.group.id}')]))
+        if cmd == '儿子':
+            if message.sender.permission.value == 'MEMBER':
+                await app.sendGroupMessage(message.sender.group, MeCh.create([Plain(f'nmsl')]))
+            else:
+                await app.sendGroupMessage(message.sender.group, MeCh.create([Plain(f'来了')]))
+        if cmd == '步川内焅':
+            await app.sendGroupMessage(message.sender.group, MeCh.create([Plain('啊？')]))
         if cmd == '吃什么':
             rate = random.randint(0, 100)
             if rate < 2:
@@ -168,15 +178,19 @@ class TalkToMeListener(Listener):
 
     async def shutTheFuckUp(self, app: Slave, message: GroupMessage):
         rands = [random.randint(0, 999) for _ in range(0, 4)]
-        if rands[0] < 12:
+        if rands[0] < 10:
             if plains := message.messageChain.get(Plain):
                 is_abs: bool = random.randint(1, 10) < 3
                 plains = [Plain(self.toAbstract(' '.join([plain.text for plain in plains])))] if is_abs else plains
                 await app.sendGroupMessage(message.sender.group.id, MeCh.create(plains))
         if rands[1] < 12:
-            await app.sendGroupMessage(message.sender.group.id, MeCh.create([Plain('确实')]))
+            if random.randint(0, 4) < 1:
+                await app.sendGroupMessage(message.sender.group.id, MeCh.create([Plain('确实')]))
+            else:
+                trash: str = random.choice(trash_talk)
+                await app.sendGroupMessage(message.sender.group.id, MeCh.create([Plain(trash)]))
         if rands[2] < 12:
-            if random.randint(1, 3) < 2:
+            if random.randint(1, 100) > 98:
                 msg = MeCh.create([At(message.sender.id), Plain('我爱你')])
                 await app.sendGroupMessage(message.sender.group.id, msg)
             else:
@@ -184,7 +198,7 @@ class TalkToMeListener(Listener):
                     plain: Plain = message.messageChain.get(Plain)[0]
                     sent = await self.trySentiment(plain.text)
                     if sent[0] == 0:
-                        url = self.nm_api if sent[1] > 0.7 else self.nm_api
+                        url = self.chp_api if sent[1] > 0.7 else self.n_api
                     else:
                         return
                     love = await requestText(url)
@@ -192,8 +206,12 @@ class TalkToMeListener(Listener):
                         love[0] = self.toAbstract(love[0])
                     msg = [At(message.sender.id), Plain(love[0])]
                     await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
-        if rands[3] < 12:
-            await self.sendPhilosophy(app, message)
+        if rands[3] < 13:
+            if random.randint(1, 3) < 2:
+                await self.sendPhilosophy(app, message)
+            else:
+                url = 'https://thiscatdoesnotexist.com/'
+                await app.sendGroupMessage(message.sender.group, MeCh.create([Image.fromUnsafeAddress(url)]))
 
     @staticmethod
     async def trySentiment(words: str) -> list:

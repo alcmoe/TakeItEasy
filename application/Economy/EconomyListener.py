@@ -10,7 +10,7 @@ from . import Economy as EconomyAPI
 
 
 class EconomyListener(Listener):
-    APP_COMMANDS = ['.MM', '.PM']
+    APP_COMMANDS = ['.MM', '.PM', '.TOP']
     command: dict = dict()
 
     def run(self):
@@ -40,6 +40,17 @@ class EconomyListener(Listener):
                     msg.append(Plain(f"\n{json.dumps(EconomyAPI.payments, ensure_ascii=False)}"))
             except (ValueError, IndexError):
                 msg.append(Plain('.pm 1|2|3|4'))
+        if cmd == self.APP_COMMANDS[2]:
+            member_list: list = await app.memberList(message.sender.group)
+            users: dict = await EconomyAPI.Economy.users()
+            top_users = [[x.name, users[str(x.id)]['balance']] for x in member_list if str(x.id) in users.keys()]
+            top_users.sort(key=lambda k: k[1], reverse=True)
+            top_users = top_users[:20]
+            top: str = '财富榜'
+            for user in top_users:
+                name, balance = user
+                top += f"\n{name}: {balance}{EconomyAPI.unit}"
+            msg = [Plain(top)]
         await app.sendGroupMessage(message.sender.group.id, MeCh.create(msg))
 
     @staticmethod

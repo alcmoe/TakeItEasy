@@ -11,8 +11,12 @@ class Listener:
 
     def __init__(self, bcc: Broadcast):
         self.bcc = bcc
+        self.task()
 
     def run(self):
+        pass
+
+    def task(self):
         pass
 
     def cmdFilter(self, message: MessageChain):

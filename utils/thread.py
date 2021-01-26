@@ -16,9 +16,9 @@ async def repeatSchedule(hour: int, minute: int, second: int, function: callable
 
 
 async def repeatDelaySchedule(second: int, function: callable, args):
-    logger.info(f'task {function.__name__} will repeat in {second} seconds')
     while True:
         await function(*args)
+        logger.info(f'task {function.__name__} will repeat in {second} seconds')
         await asyncio.sleep(second)
 
 

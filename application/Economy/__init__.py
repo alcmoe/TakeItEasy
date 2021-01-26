@@ -2,7 +2,7 @@ from Config import Config
 from Logger import APPLogger
 from .InitConfig import contents
 app: str = 'Economy'
-logger = APPLogger(app)
+logger = APPLogger(app, 33)
 
 configs = {
     'setting': "setting.json",

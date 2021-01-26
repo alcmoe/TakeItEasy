@@ -1,3 +1,5 @@
+import hashlib
+
 from . import date, datetime, time
 
 PATH_RES = 'res/'
@@ -69,3 +71,9 @@ def getTimeCircle(h: int = 0, m: int = 0, s: int = 0) -> int:
     target_timestamp = next_clock.timestamp()
     diff = target_timestamp - time.time()
     return (24 * 60 * 60 + diff) if diff < 0 else diff
+
+
+def md5File(file_name: str):
+    with open(file_name, 'rb') as fp:
+        data = fp.read()
+    return hashlib.md5(data).hexdigest()

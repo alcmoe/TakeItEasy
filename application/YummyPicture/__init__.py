@@ -3,14 +3,15 @@ from Logger import APPLogger
 from .InitConfig import contents
 
 app: str = 'YummyPicture'
-logger = APPLogger(app)
+logger = APPLogger(app, 31)
 
 configs = {
     'setting': "setting.json",
     'yande': "yande.json",
     'konachan': "konachan.json",
     'anipic': "anipic.json",
-    'ehentai': "ehentai.json"
+    'ehentai': "ehentai.json",
+    'pixiv': "pixiv.json"
 }
 
 ymConfig = Config(app, configs, {'setting': 'ripper'})

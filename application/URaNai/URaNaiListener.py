@@ -18,6 +18,7 @@ from utils.trim import PATH_IMAGE, PATH_RES, PATH_FONT
 class URaNaiListener(Listener):
     APP_COMMANDS = ['运势', '转运']
     PATH_URN = PATH_RES + PATH_IMAGE + 'URaNai/'
+    ura_pack: dict = {0: 'kiZuNaAi/', 1: 'princess/', 2: 'nero/', 3: 'lastOrigin/'}
     command: dict = dict()
 
     try:
@@ -36,7 +37,8 @@ class URaNaiListener(Listener):
     async def commandHandler(self, app: Slave, message: GroupMessage):
         cmd: str = self.command.get('cmd')
         random.seed(datetime.now().strftime('%Y%m%d'))
-        pack = 'princess/' if random.randint(0, 1) else 'kiZuNaAi/'
+        ura_key = random.randint(0, 3)
+        pack = self.ura_pack.get(ura_key)
         random.seed(None)
 
         async def sendURaNai(force=False):

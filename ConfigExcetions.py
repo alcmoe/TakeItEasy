@@ -1,6 +1,6 @@
 from Logger import APPLogger
 
-logger = APPLogger('Config')
+logger = APPLogger('Config', 36)
 
 
 class ConfigNotFoundException(Exception):

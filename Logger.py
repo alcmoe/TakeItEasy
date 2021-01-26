@@ -19,7 +19,7 @@ formatter = colorlog.ColoredFormatter(fmt, log_colors=log_colors_config)
 stream = logging.StreamHandler()
 log_dir: str = os.path.join(os.path.dirname(__file__), f'log')
 Path(log_dir).mkdir(exist_ok=True, parents=True)
-th = handlers.TimedRotatingFileHandler(filename='log/bot_take_it_easy.log', when='D', backupCount=3, encoding='utf-8')
+th = handlers.TimedRotatingFileHandler(filename='log/bot_take_it_easy.log', when='D', backupCount=10, encoding='utf-8')
 # stream.setLevel(level)
 stream.setFormatter(formatter)
 logger = logging.getLogger()
@@ -32,21 +32,25 @@ class APPLogger:
     app: str = ''
     lead: str = ''
 
-    def __init__(self, app: str):
+    def __init__(self, app: str, color: int = 37):
         self.app = app
         self.lead = f"[{self.app}]: "
+        self.format = f'\033[1;{color};40m' + '{msg}\033[0m'
 
     def info(self, msg):
-        return logger.info(self.lead + msg)
+        return logger.info(self.colorMessage(self.lead + msg))
 
     def error(self, msg):
-        return logger.error(self.lead + msg)
+        return logger.error(self.colorMessage(self.lead + msg))
 
     def debug(self, msg):
-        return logger.debug(self.lead + msg)
+        return logger.debug(self.colorMessage(self.lead + msg))
 
     def warning(self, msg):
-        return logger.warning(self.lead + msg)
+        return logger.warning(self.colorMessage(self.lead + msg))
 
     def exception(self, msg):
-        return logger.exception(self.lead + msg)
+        return logger.exception(self.colorMessage(self.lead + msg))
+
+    def colorMessage(self, msg):
+        return self.format.format(msg=msg)
