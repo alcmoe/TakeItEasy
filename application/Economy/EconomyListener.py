@@ -1,8 +1,9 @@
 import json
 
 from graia.application import GraiaMiraiApplication as Slave, GroupMessage
-from graia.application.message.chain import MessageChain as MeCh
-from graia.application.message.elements.internal import At, Plain
+from graia.application.message.chain import MessageChain as MeCh, MessageChain
+from graia.application.message.elements.internal import At, Plain, Quote
+from graia.broadcast import ExecutionStop
 from graia.broadcast.builtin.decoraters import Depend
 
 from Listener import Listener
@@ -10,7 +11,7 @@ from . import Economy as EconomyAPI
 
 
 class EconomyListener(Listener):
-    APP_COMMANDS = ['.MM', '.PM', '.TOP']
+    APP_COMMANDS = ['.MM', '.PM', '.TOP', '.PAY']
     command: dict = dict()
 
     def run(self):
@@ -18,6 +19,28 @@ class EconomyListener(Listener):
         @self.bcc.receiver(GroupMessage, headless_decoraters=[Depend(self.cmdFilter)])
         async def groupCmdHandler(app: Slave, message: GroupMessage):
             await self.commandHandler(app, message)
+
+    def cmdFilter(self, message: MessageChain):
+        if cmd := message.asDisplay().split(' '):
+            cmd = cmd[0].upper()
+            if cmd not in self.APP_COMMANDS:
+                raise ExecutionStop()
+            self.command.update(cmd=cmd)
+            if cmd != self.APP_COMMANDS[3]:
+                return
+            args = []
+            if ats := message.get(At):
+                at: At = ats[0]
+                args.append(at.target)
+            plain: Plain
+            txs: list = ' '.join([plain.text.strip() for plain in message.get(Plain) if plain.text.strip()]).split(' ')
+            le: int = 2 - len(args)
+            args.extend(txs[1: 1 + le])
+            if len(args) < 2:
+                raise ExecutionStop()
+            self.command.update(args=args)
+        else:
+            raise ExecutionStop()
 
     async def commandHandler(self, app: Slave, message: GroupMessage):
         commands: [str] = message.messageChain.asDisplay().split(' ')
@@ -51,6 +74,25 @@ class EconomyListener(Listener):
                 name, balance = user
                 top += f"\n{name}: {balance}{EconomyAPI.unit}"
             msg = [Plain(top)]
+        if cmd == self.APP_COMMANDS[3]:
+            args: list = self.command.get('args')
+            print(args)
+            if isinstance(args[0], int):
+                args[0] = str(args[0])
+            if args[0].isnumeric() and args[1].isnumeric() and int(args[1]) > 0:
+                target: int = int(args[0])
+                count: int = int(args[1])
+                if await EconomyAPI.Economy.has(str(target), create=False):
+                    if await EconomyAPI.Economy.pay(message.sender.id, EconomyAPI.capitalist, count):
+                        tax: int = int(count * .1)
+                        await EconomyAPI.Economy.pay(EconomyAPI.capitalist, target, count - tax)
+                        msg.extend([Plain(f'成功付给'), At(target), Plain(f'{count - tax} {EconomyAPI.unit}')])
+                    else:
+                        msg.append(Plain(f'你的{EconomyAPI.unit}不足'))
+                else:
+                    msg.append(Plain(f'你给鬼打{EconomyAPI.unit}呢？'))
+            else:
+                msg.append(Plain('参数错误'))
         await app.sendGroupMessage(message.sender.group.id, MeCh.create(msg))
 
     @staticmethod

@@ -31,13 +31,15 @@ class TalkToMeListener(Listener):
     except ImportError:
         Economy = None
 
-    APP_COMMANDS = ['啊？', '吃什么', '不', '群号', '儿子', '步川内焅']
+    APP_COMMANDS = ['啊？', '吃什么', '不', '群号', '儿子', '步川内焅', '逼话']
     APP_QUOTE_AT_COMMANDS = ['骂他', '翻译翻译']
     nm_api = ttkConfig.getConfig('setting').get('nm_api')
     n_api = ttkConfig.getConfig('setting').get('n_api')
     chp_api = ttkConfig.getConfig('setting').get('chp_api')
     fy_api = ttkConfig.getConfig('setting').get('fy_api')
+    what_we_eat = ttkConfig.getConfig('setting').get('what_we_eat')
     capitalist = 0
+    total = [0, 0, 0, 0, 0]
 
     def run(self):
         @self.bcc.receiver(GroupMessage, headless_decoraters=[Depend(self.atOrQuoteFilter)])
@@ -114,14 +116,14 @@ class TalkToMeListener(Listener):
         if cmd == '步川内焅':
             await app.sendGroupMessage(message.sender.group, MeCh.create([Plain('啊？')]))
         if cmd == '吃什么':
-            rate = random.randint(0, 100)
-            if rate < 2:
-                eat = '吃屎吧'
-            else:
-                what_we_eat = ttkConfig.getConfig('setting').get('what_we_eat')
-                index = random.randint(0, len(what_we_eat) - 1)
-                eat = f'吃{what_we_eat[index]}'
+            eat = '吃屎吧' if random.randint(0, 100) < 2 else random.choice(self.what_we_eat)
             await app.sendGroupMessage(message.sender.group, MeCh.create([Plain(eat)]))
+        if cmd == '逼话':
+            msg: str = f'复活以来偷窥{self.total[4]}次'
+            title: list = ['复读', '垃圾话', '爱你', '哲学猫']
+            for index, tt in enumerate(title):
+                msg += f'\n{tt}{self.total[index]}次'
+            await app.sendGroupMessage(message.sender.group, MeCh.create([Plain(msg)]))
 
     async def atOrQuoteHandler(self, app, message: GroupMessage):
         logger.debug('TalkToMe at handler act')
@@ -162,8 +164,8 @@ class TalkToMeListener(Listener):
                 await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
             return
         if fencing:  # call bot
-            if text := self.command.get('text'):
-                sent = await self.trySentiment(text[0].text)
+            if text := self.getFirstTrimText(self.command.get('text')):
+                sent = await self.trySentiment(text)
                 if sent[0] == 0:
                     url = self.nm_api if sent[1] > 0.5 else self.n_api
                 elif sent[0] == 2:
@@ -177,19 +179,23 @@ class TalkToMeListener(Listener):
                 return
 
     async def shutTheFuckUp(self, app: Slave, message: GroupMessage):
+        self.total[4] += 1
         rands = [random.randint(0, 999) for _ in range(0, 4)]
         if rands[0] < 10:
+            self.total[0] += 1
             if plains := message.messageChain.get(Plain):
                 is_abs: bool = random.randint(1, 10) < 3
                 plains = [Plain(self.toAbstract(' '.join([plain.text for plain in plains])))] if is_abs else plains
                 await app.sendGroupMessage(message.sender.group.id, MeCh.create(plains))
         if rands[1] < 12:
+            self.total[1] += 1
             if random.randint(0, 4) < 1:
                 await app.sendGroupMessage(message.sender.group.id, MeCh.create([Plain('确实')]))
             else:
                 trash: str = random.choice(trash_talk)
                 await app.sendGroupMessage(message.sender.group.id, MeCh.create([Plain(trash)]))
         if rands[2] < 12:
+            self.total[2] += 1
             if random.randint(1, 100) > 98:
                 msg = MeCh.create([At(message.sender.id), Plain('我爱你')])
                 await app.sendGroupMessage(message.sender.group.id, msg)
@@ -207,6 +213,7 @@ class TalkToMeListener(Listener):
                     msg = [At(message.sender.id), Plain(love[0])]
                     await app.sendGroupMessage(message.sender.group, MeCh.create(msg))
         if rands[3] < 13:
+            self.total[3] += 1
             if random.randint(1, 3) < 2:
                 await self.sendPhilosophy(app, message)
             else:

@@ -1,4 +1,5 @@
 import random
+import time
 
 from graia.application import GraiaMiraiApplication as Slave, GroupMessage
 from graia.application.message.elements.internal import Plain, At
@@ -8,15 +9,18 @@ from graia.broadcast.builtin.decoraters import Depend
 from Listener import Listener
 from application.Economy import Economy
 from .HorseRacing import HorseRacing, Horse
-from . import logger
+from . import logger, clConfig
 from .lang import lang as lg
+from .Ico import IcoApi
 
 
 class CapitalismListener(Listener):
     HORSE_RACING = {int: HorseRacing}
-    APP_COMMANDS = ['赛马', '.SK', '.SKI', '.加攻', '.加血', '.加甲', '.加敏捷', '.加幸运']
+    APP_COMMANDS = ['赛马', '.SK', '.SKI', '.加攻', '.加血', '.加甲', '.加敏捷', '.加幸运', '签到', '打劫', 'ICO']
     HORSE_ADD_PERK = ['.加攻', '.加血', '.加甲', '.加敏捷', '.加幸运']
     HR = 'horse_racing'
+    CL = 'economy'
+    users: dict = clConfig.getConfig('config').getAll()
     command: dict = dict()
 
     def run(self):
@@ -25,11 +29,13 @@ class CapitalismListener(Listener):
             await self.commandHandler(app, message)
 
     async def commandHandler(self, app: Slave, message: GroupMessage):
+        # print(await IcoApi.getPrice('bitcoin'))
         commands: [str] = message.messageChain.asDisplay().split(' ')
         cmd = commands[0].upper()
         racing: HorseRacing
         lang_key = []
         msg = []
+        type_: str = self.HR
         if cmd == '赛马':
             if racing := self.HORSE_RACING.get(message.sender.group.id):
                 if racing.status == 2:
@@ -89,8 +95,64 @@ class CapitalismListener(Listener):
                         msg = [Plain(msg_dict[re[1]])]
             if not lang_key:
                 lang_key = ['add_my_ass']
+        if cmd == '签到':
+            type_ = self.CL
+            if not (user := self.users.get(str(message.sender.id))):
+                user: dict = self.insertUser(message.sender.id)
+            diff: int = time.time() // (24 * 60 * 60) - user.get('last_sign') // (24 * 60 * 60)
+            if diff:
+                user['keep_days'] += 1 if diff == 1 else -user['keep_days'] + 1
+                user['last_sign'] = time.time()
+                keep: int = user['keep_days']
+                await clConfig.save('config')
+                rate: int = random.randint(0, 100 + keep)
+                multi: int = 1
+                if rate < keep:
+                    multi = 2
+                max_: int = random.randint(0, keep if keep <= 50 else 50)
+                price: int = multi * (50 + max_ * 10)
+                await Economy.Economy.addMoney(message.sender.id, price)
+                await Economy.Economy.addValue(5)
+                await Economy.Economy.saveMoney()
+                lang_key = ['sign_success', [keep, price, Economy.unit, multi, 50, max_, 10, keep, keep + 100]]
+            else:
+                lang_key = ['signed_today']
+        if cmd == '打劫':
+            type_ = self.CL
+            target: int = None
+            if ats := message.messageChain.get(At):
+                at: At = ats[0]
+                target = at.target
+            elif len(commands) > 1 and commands[1].isnumeric():
+                target = int(commands[1])
+            if target:
+                if await Economy.Economy.has(str(target), create=False):
+                    count = 10
+                    if len(commands) > 2:
+                        count = int(commands[2]) if commands[2].isnumeric() else count
+                    count = 10 if count < 10 else count
+                    if await Economy.Economy.pay(message.sender.id, Economy.capitalist, count):
+                        if await Economy.Economy.pay(target, Economy.capitalist, count):
+                            rd: int = random.randint(0, count + 10)
+                            if rd < 10:
+                                tax: int = int(count * .1)
+                                await Economy.Economy.pay(Economy.capitalist, message.sender.id, 2 * count - tax)
+                                lang_key = ['success_rob', [count - tax, Economy.unit, 10, count + 10]]
+                            else:
+                                await Economy.Economy.pay(Economy.capitalist, target, count + count // 4)
+                                await Economy.Economy.pay(Economy.capitalist, message.sender.id, count // 2)
+                                lang_key = ['fail_rob', [Economy.unit, count // 2, 10, count + 10]]
+                        else:
+                            await Economy.Economy.pay(Economy.capitalist, message.sender.id, count)
+                            lang_key = ['target_not_enough_money', [Economy.unit, count]]
+                    else:
+                        lang_key = ['you_not_enough_money', [Economy.unit, count]]
+                else:
+                    lang_key = ['no_rob_target']
+            else:
+                lang_key = ['wrong_args']
         if not msg:
-            text = await self.lang(self.HR, lang_key[0])
+            text = await self.lang(type_, lang_key[0])
             if len(lang_key) > 1:
                 text = text.format(*lang_key[1])
             msg = [Plain(text)]
@@ -134,3 +196,11 @@ class CapitalismListener(Listener):
             return lg[app][key]
         except KeyError:
             return ''
+
+    @staticmethod
+    def insertUser(user: int) -> dict:
+        CapitalismListener.users[str(user)] = {
+            "last_sign": 0.0,
+            "keep_days": 0
+        }
+        return CapitalismListener.users.get(str(user))

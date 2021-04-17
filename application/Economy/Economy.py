@@ -252,16 +252,17 @@ class Economy:
         return users[account]
 
     @staticmethod
-    async def has(account: str) -> bool:
+    async def has(account: str, create: bool = True) -> bool:
         if users.get(account) is None:
-            users[account] = {
-                'balance': 0,
-                'payment': 1,
-                'credit_pay_use': 0,
-                'credit_period_repay': 0,
-                'credit_pay_adjust': 0,
-                'update': time.time()
-            }
+            if create:
+                users[account] = {
+                    'balance': 0,
+                    'payment': 1,
+                    'credit_pay_use': 0,
+                    'credit_period_repay': 0,
+                    'credit_pay_adjust': 0,
+                    'update': time.time()
+                }
             return False
         return True
 
@@ -283,6 +284,10 @@ class Economy:
     @staticmethod
     async def save(option=''):
         await ecConfig.save(option)
+
+    @staticmethod
+    async def saveMoney():
+        await ecConfig.save('config')
 
     @staticmethod
     async def trySave():

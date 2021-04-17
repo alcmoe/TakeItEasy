@@ -152,7 +152,12 @@ class IwaraRipper:
             user_id = await self.userId(user_link)
             find = ['div', 'field-item even']
             video_element = video_col_element.find_all(find[0], class_=find[1])
-            video_link = video_element[0].contents[0]['href']
+            try:
+                video_link = video_element[0].contents[0]['href']
+            except IndexError:
+                logger.info('test,' + self.host+co)
+                return
+
             is_video = 0 if 'images' in video_link else 1
             video_thumbnail = video_element[0].contents[0].contents[0]['src']
             is_youtube = 1 if 'youtube' in video_thumbnail else 0
