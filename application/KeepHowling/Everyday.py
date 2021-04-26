@@ -19,8 +19,12 @@ class Everyday(Listener):
         full = BeautifulSoup(data, "html.parser")
         element = full.find_all('div', {'class': 'share_media'})[0].find('img')['src']
         image: Image = Image.fromUnsafeAddress(element)
-        for group in groups:
-            await app.sendGroupMessage(group, MeCh.create([image]))
+        from graia.application.exceptions import AccountMuted
+        try:
+            for group in groups:
+                await app.sendGroupMessage(group, MeCh.create([image]))
+        except AccountMuted:
+            logger.info(f'Failed to send news, -Muted')
 
     def task(self):
         from Roll import app

@@ -6,13 +6,15 @@ from .trim import getTimeCircle
 
 
 async def repeatSchedule(hour: int, minute: int, second: int, function: callable, args):
-    circle = getTimeCircle(hour, minute, second)
-    logger.info(f'task {function.__name__} will run in {circle} seconds')
-    await asyncio.sleep(int(circle))
-    await function(*args)
+    times: int = 0
     while True:
-        await asyncio.sleep(24 * 60 * 60)
+        circle: int = 24 * 60 * 60
+        if not times % 5:  # 5 days to correct sleep time
+            circle: int = getTimeCircle(hour, minute, second)
+        logger.info(f'task {function.__name__} will run in {circle} seconds')
+        await asyncio.sleep(int(circle))
         await function(*args)
+        times += 1
 
 
 async def repeatDelaySchedule(second: int, function: callable, args):

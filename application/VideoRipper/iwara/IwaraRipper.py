@@ -68,7 +68,8 @@ class IwaraRipper:
     @staticmethod
     async def loginKey():
         logger.info('getting login key')
-        html = await request('GET', 'https://ecchi.iwara.tv/user/login')
+        connector: ProxyConnector = await IwaraRipper.getConnector()
+        html = await request('GET', 'https://ecchi.iwara.tv/user/login', connector=connector)
         full = BeautifulSoup(html, "html.parser")
         h = full.find("head")
         capture = h.find("script", text=re.compile("antibot")).string.strip()
@@ -79,7 +80,8 @@ class IwaraRipper:
     @staticmethod
     async def getUserId(user_link: str, only_id: bool):
         logger.info(f'getting [{user_link}] real id')
-        html = await request('GET', IwaraRipper.host + user_link)
+        connector: ProxyConnector = await IwaraRipper.getConnector()
+        html = await request('GET', IwaraRipper.host + user_link, connector=connector)
         full = BeautifulSoup(html, "html.parser")
         h = full.find("head")
         capture = h.find("script", text=re.compile("views")).string.strip()
@@ -95,7 +97,7 @@ class IwaraRipper:
         cookie_str = vrConfig.getConfig('iwara').get('cookies')
         cookie_exp = vrConfig.getConfig('iwara').get('cookies_expire')
         if not cookie_str or time.time() > cookie_exp + 15 * 24 * 60 * 60:
-            logger.info('cookie expired fetching')
+            logger.info('cookie expired. fetching')
             cookie = await self.fetchCookie()
             logger.info('new cookie fetched')
             vrConfig.getConfig('iwara').set('cookies', cookie)
@@ -218,7 +220,6 @@ class IwaraRipper:
     @staticmethod
     async def getConnector() -> ProxyConnector:
         connector: ProxyConnector = ProxyConnector()
-        proxy = vrConfig.getConfig('setting').get('proxy')
-        if proxy:
+        if proxy := vrConfig.getConfig('setting').get('proxy'):
             connector = ProxyConnector.from_url(proxy)
         return connector

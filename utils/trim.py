@@ -77,3 +77,9 @@ def md5File(file_name: str):
     with open(file_name, 'rb') as fp:
         data = fp.read()
     return hashlib.md5(data).hexdigest()
+
+
+def checkUrl(url: str):
+    if url.startswith('//'):
+        url = 'https:' + url
+    return url

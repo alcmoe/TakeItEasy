@@ -1,4 +1,5 @@
 from . import *
+from .trim import checkUrl
 
 
 async def saveUrlPicture(url: str, name: str, folder: str = '', ext: str = '', connector=None) -> str:
@@ -77,7 +78,7 @@ async def requestText(url: str, method: str = 'GET', headers: dict = None, param
 
 async def request(method: str = 'GET', url: str = '', headers: dict = None, params: dict = None, body=None,
                   connector: ProxyConnector = None, data=None, cookies=None, close=True):
-    async with aiohttp.request(method, url, headers=headers, params=params, json=body, connector=connector,
+    async with aiohttp.request(method, checkUrl(url), headers=headers, params=params, json=body, connector=connector,
                                data=data, cookies=cookies) as response:
         raw_data = await response.read()
         if connector and close:

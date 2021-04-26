@@ -28,7 +28,6 @@ class VideoRipperListener(Listener):
         @self.bcc.receiver(FriendMessage, headless_decoraters=[Depend(self.quoteCMDFilter)])
         async def groupCmdHandler(app: Slave, message: FriendMessage):
             await self.quoteHandler(app, message)
-        self.task()
         return self
 
     async def commandHandler(self, app: Slave, message: GroupMessage):
@@ -115,5 +114,4 @@ class VideoRipperListener(Listener):
                 logger.debug('nothing was post')
         except ClientConnectorError:
             logger.debug('connector error retry')
-        except ServerDisconnectedError:
-            logger.debug('disconnected error retry')
+
